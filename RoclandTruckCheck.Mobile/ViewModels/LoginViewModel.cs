@@ -41,7 +41,7 @@ public partial class LoginViewModel : BaseViewModel
 
             if (exito)
             {
-                await Shell.Current.GoToAsync("//MainPage");
+                await Shell.Current.GoToAsync("//TipoAcceso");
             }
             else
             {

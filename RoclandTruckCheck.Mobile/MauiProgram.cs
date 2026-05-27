@@ -24,10 +24,11 @@ namespace RoclandTruckCheck.Mobile
 
             builder.Services.AddSingleton<ApiService>();
             builder.Services.AddSingleton<AuthStateService>();
+            //builder.Services.AddSingleton<SesionGuardia>();
 
             builder.Services.AddTransient<LoginViewModel>();
-            builder.Services.AddTransient<TipoAccesoModel>();
-            builder.Services.AddTransient<ChecklistModel>();
+            builder.Services.AddTransient<TipoAccesoViewModel>();
+            builder.Services.AddTransient<ChecklistViewModel>();
 
             builder.Services.AddTransient<LoginPage>();
             builder.Services.AddTransient<TipoAcceso>();

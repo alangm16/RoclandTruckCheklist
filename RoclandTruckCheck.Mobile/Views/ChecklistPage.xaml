@@ -1,12 +1,546 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+<ContentPage x:Class="RoclandTruckCheck.Mobile.Views.ChecklistPage"
+             xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             x:Class="RoclandTruckCheck.Mobile.Views.ChecklistPage"
-             Title="ChecklistPage">
-    <VerticalStackLayout>
-        <Label 
-            Text="Welcome to .NET MAUI!"
-            VerticalOptions="Center" 
-            HorizontalOptions="Center" />
-    </VerticalStackLayout>
+             xmlns:vm="clr-namespace:RoclandTruckCheck.Mobile.ViewModels"
+             x:DataType="vm:ChecklistViewModel"
+             Shell.NavBarIsVisible="False"
+             BackgroundColor="#F0F4F0">
+
+    <!-- ════════ GRID RAÍZ ════════ -->
+    <Grid RowDefinitions="Auto,*,Auto">
+
+        <!-- ══════════════════════════════════════════════════════ -->
+        <!--  HEADER DINÁMICO (verde = Entrada / naranja = Salida)  -->
+        <!-- ══════════════════════════════════════════════════════ -->
+        <Grid Grid.Row="0" x:Name="HeaderGrid"
+              Padding="20,48,20,24"
+              ColumnDefinitions="Auto,*,Auto">
+            <Grid.Background>
+                <LinearGradientBrush x:Name="HeaderGradient"
+                                     StartPoint="0,0" EndPoint="1,1">
+                    <GradientStop x:Name="GradStop1" Color="#1B8A3A" Offset="0.0"/>
+                    <GradientStop x:Name="GradStop2" Color="#4CAF50" Offset="1.0"/>
+                </LinearGradientBrush>
+            </Grid.Background>
+
+            <!-- Botón Volver -->
+            <Button Grid.Column="0"
+                    ImageSource="icon_back.png"
+                    BackgroundColor="#22FFFFFF"
+                    CornerRadius="10"
+                    WidthRequest="44" HeightRequest="44"
+                    VerticalOptions="Center"
+                    Clicked="OnVolverClicked"/>
+
+            <!-- Título centrado -->
+            <VerticalStackLayout Grid.Column="1"
+                                 HorizontalOptions="Center"
+                                 VerticalOptions="Center"
+                                 Spacing="2">
+                <Label Text="{Binding TituloTipo}"
+                       FontSize="13"
+                       FontAttributes="Bold"
+                       TextColor="#C8FFE0"
+                       HorizontalOptions="Center"
+                       CharacterSpacing="2"/>
+                <!-- Contador de ítems OK -->
+                <Label FontSize="28" FontAttributes="Bold"
+                       TextColor="White"
+                       HorizontalOptions="Center">
+                    <Label.FormattedText>
+                        <FormattedString>
+                            <Span Text="{Binding ItemsOk}" FontSize="28" FontAttributes="Bold" TextColor="White"/>
+                            <Span Text="/6 revisados" FontSize="16" TextColor="#C8FFE0"/>
+                        </FormattedString>
+                    </Label.FormattedText>
+                </Label>
+            </VerticalStackLayout>
+
+            <!-- Badge OK -->
+            <VerticalStackLayout Grid.Column="2"
+                                 VerticalOptions="Center"
+                                 HorizontalOptions="End"
+                                 Spacing="2">
+                <Label Text="OK"
+                       FontSize="10"
+                       FontAttributes="Bold"
+                       TextColor="#C8FFE0"
+                       HorizontalOptions="Center"/>
+                <Border BackgroundColor="#22FFFFFF"
+                        StrokeShape="Ellipse"
+                        WidthRequest="36" HeightRequest="36">
+                    <Label Text="{Binding ItemsOk}"
+                           FontSize="16"
+                           FontAttributes="Bold"
+                           TextColor="White"
+                           HorizontalOptions="Center"
+                           VerticalOptions="Center"/>
+                </Border>
+            </VerticalStackLayout>
+        </Grid>
+
+        <!-- Barra de progreso -->
+        <ProgressBar Grid.Row="0"
+                     Progress="{Binding ProgresoChecklist}"
+                     ProgressColor="White"
+                     BackgroundColor="#33FFFFFF"
+                     HeightRequest="5"
+                     VerticalOptions="End"/>
+
+        <!-- ══════════════════════════════════════════════════════ -->
+        <!--  CUERPO SCROLLABLE                                     -->
+        <!-- ══════════════════════════════════════════════════════ -->
+        <ScrollView Grid.Row="1"
+                    VerticalScrollBarVisibility="Never">
+            <VerticalStackLayout Padding="20,24,20,12" Spacing="16">
+
+                <!-- ── SELECTORES: Sucursal + Placas ─────────── -->
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+
+                    <!-- Sucursal -->
+                    <VerticalStackLayout Grid.Column="0" Spacing="6">
+                        <Label Text="Sucursal"
+                               FontSize="12" FontAttributes="Bold"
+                               TextColor="#5A7A5A"/>
+                        <Frame BackgroundColor="White"
+                               CornerRadius="12"
+                               Padding="4,0"
+                               BorderColor="#C8DFC8"
+                               HasShadow="False">
+                            <Picker Title="Seleccionar"
+                                    TitleColor="#A5BFA5"
+                                    TextColor="#1B3A1B"
+                                    FontSize="14"
+                                    ItemsSource="{Binding Sucursales}"
+                                    SelectedItem="{Binding SucursalSeleccionada}"
+                                    ItemDisplayBinding="{Binding Nombre}"
+                                    HeightRequest="52"/>
+                        </Frame>
+                    </VerticalStackLayout>
+
+                    <!-- Placas -->
+                    <VerticalStackLayout Grid.Column="1" Spacing="6">
+                        <Label Text="Placas"
+                               FontSize="12" FontAttributes="Bold"
+                               TextColor="#5A7A5A"/>
+                        <Frame BackgroundColor="White"
+                               CornerRadius="12"
+                               Padding="4,0"
+                               BorderColor="#C8DFC8"
+                               HasShadow="False">
+                            <Picker Title="Seleccionar"
+                                    TitleColor="#A5BFA5"
+                                    TextColor="#1B3A1B"
+                                    FontSize="14"
+                                    ItemsSource="{Binding Vehiculos}"
+                                    SelectedItem="{Binding VehiculoSeleccionado}"
+                                    ItemDisplayBinding="{Binding Placas}"
+                                    HeightRequest="52"/>
+                        </Frame>
+                    </VerticalStackLayout>
+                </Grid>
+
+                <!-- ── SELECTOR: Chofer ───────────────────────── -->
+                <VerticalStackLayout Spacing="6">
+                    <Label Text="Chofer"
+                           FontSize="12" FontAttributes="Bold"
+                           TextColor="#5A7A5A"/>
+                    <Frame BackgroundColor="White"
+                           CornerRadius="12"
+                           Padding="4,0"
+                           BorderColor="#C8DFC8"
+                           HasShadow="False">
+                        <Picker Title="Nombre completo"
+                                TitleColor="#A5BFA5"
+                                TextColor="#1B3A1B"
+                                FontSize="14"
+                                ItemsSource="{Binding Choferes}"
+                                SelectedItem="{Binding ChoferSeleccionado}"
+                                ItemDisplayBinding="{Binding Nombre}"
+                                HeightRequest="52"/>
+                    </Frame>
+                </VerticalStackLayout>
+
+                <!-- ── ACCIONES RÁPIDAS ───────────────────────── -->
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                    <Button Grid.Column="0"
+                            x:Name="BtnTodoOk"
+                            Text="⚡  Todo OK"
+                            BackgroundColor="#4CAF50"
+                            TextColor="White"
+                            FontAttributes="Bold"
+                            FontSize="15"
+                            CornerRadius="12"
+                            HeightRequest="50"
+                            Command="{Binding TodoOkCommand}"/>
+                    <Button Grid.Column="1"
+                            Text="Limpiar"
+                            BackgroundColor="White"
+                            TextColor="#5A7A5A"
+                            BorderColor="#C8DFC8"
+                            BorderWidth="1"
+                            FontSize="14"
+                            CornerRadius="12"
+                            HeightRequest="50"
+                            WidthRequest="100"
+                            Command="{Binding LimpiarCommand}"/>
+                </Grid>
+
+                <!-- ══════════════════════════════════════════════ -->
+                <!--  ITEMS DEL CHECKLIST                           -->
+                <!-- Cada ítem: ícono + nombre + Pendiente/OK/Falla -->
+                <!--            botón ✕  |  botón ✓                -->
+                <!-- ══════════════════════════════════════════════ -->
+
+                <!-- Candados -->
+                <Frame x:Name="ItemCandados"
+                       BackgroundColor="White" CornerRadius="16"
+                       Padding="16,14" BorderColor="#E8F0E8" HasShadow="False">
+                    <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="14">
+                        <Border Grid.Column="0"
+                                BackgroundColor="#F0F8F0"
+                                StrokeShape="RoundRectangle 10"
+                                WidthRequest="44" HeightRequest="44">
+                            <Image Source="lock.png"
+                                   WidthRequest="22" HeightRequest="22"
+                                   HorizontalOptions="Center" VerticalOptions="Center"/>
+                        </Border>
+                        <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="2">
+                            <Label Text="Candados"
+                                   FontSize="15" FontAttributes="Bold"
+                                   TextColor="#1B3A1B"/>
+                            <Label x:Name="LblCandados"
+                                   Text="Pendiente"
+                                   FontSize="12" TextColor="#9E9E9E"/>
+                        </VerticalStackLayout>
+                        <!-- Botón NO -->
+                        <Border Grid.Column="2"
+                                StrokeShape="Ellipse"
+                                Stroke="#E0E0E0" StrokeThickness="1.5"
+                                WidthRequest="40" HeightRequest="40"
+                                BackgroundColor="White">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnCandadosFallaTapped"/>
+                            </Border.GestureRecognizers>
+                            <Image x:Name="IcoCandadosFalla"
+                                   Source="close_gray.png"
+                                   WidthRequest="18" HeightRequest="18"
+                                   HorizontalOptions="Center" VerticalOptions="Center"/>
+                        </Border>
+                        <!-- Botón OK -->
+                        <Border Grid.Column="3"
+                                StrokeShape="Ellipse"
+                                Stroke="#E0E0E0" StrokeThickness="1.5"
+                                WidthRequest="40" HeightRequest="40"
+                                BackgroundColor="White">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnCandadosOkTapped"/>
+                            </Border.GestureRecognizers>
+                            <Image x:Name="IcoCandadosOk"
+                                   Source="check_gray.png"
+                                   WidthRequest="18" HeightRequest="18"
+                                   HorizontalOptions="Center" VerticalOptions="Center"/>
+                        </Border>
+                    </Grid>
+                </Frame>
+
+                <!-- Licencia -->
+                <Frame x:Name="ItemLicencia"
+                       BackgroundColor="White" CornerRadius="16"
+                       Padding="16,14" BorderColor="#E8F0E8" HasShadow="False">
+                    <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="14">
+                        <Border Grid.Column="0"
+                                BackgroundColor="#F0F8F0"
+                                StrokeShape="RoundRectangle 10"
+                                WidthRequest="44" HeightRequest="44">
+                            <Image Source="id_card.png"
+                                   WidthRequest="22" HeightRequest="22"
+                                   HorizontalOptions="Center" VerticalOptions="Center"/>
+                        </Border>
+                        <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="2">
+                            <Label Text="Licencia vigente"
+                                   FontSize="15" FontAttributes="Bold"
+                                   TextColor="#1B3A1B"/>
+                            <Label x:Name="LblLicencia"
+                                   Text="Pendiente"
+                                   FontSize="12" TextColor="#9E9E9E"/>
+                        </VerticalStackLayout>
+                        <Border Grid.Column="2" StrokeShape="Ellipse"
+                                Stroke="#E0E0E0" StrokeThickness="1.5"
+                                WidthRequest="40" HeightRequest="40" BackgroundColor="White">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnLicenciaFallaTapped"/>
+                            </Border.GestureRecognizers>
+                            <Image x:Name="IcoLicenciaFalla" Source="close_gray.png"
+                                   WidthRequest="18" HeightRequest="18"
+                                   HorizontalOptions="Center" VerticalOptions="Center"/>
+                        </Border>
+                        <Border Grid.Column="3" StrokeShape="Ellipse"
+                                Stroke="#E0E0E0" StrokeThickness="1.5"
+                                WidthRequest="40" HeightRequest="40" BackgroundColor="White">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnLicenciaOkTapped"/>
+                            </Border.GestureRecognizers>
+                            <Image x:Name="IcoLicenciaOk" Source="check_gray.png"
+                                   WidthRequest="18" HeightRequest="18"
+                                   HorizontalOptions="Center" VerticalOptions="Center"/>
+                        </Border>
+                    </Grid>
+                </Frame>
+
+                <!-- Sin daños nuevos -->
+                <Frame x:Name="ItemDanios"
+                       BackgroundColor="White" CornerRadius="16"
+                       Padding="16,14" BorderColor="#E8F0E8" HasShadow="False">
+                    <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="14">
+                        <Border Grid.Column="0" BackgroundColor="#F0F8F0"
+                                StrokeShape="RoundRectangle 10"
+                                WidthRequest="44" HeightRequest="44">
+                            <Image Source="car_check.png"
+                                   WidthRequest="22" HeightRequest="22"
+                                   HorizontalOptions="Center" VerticalOptions="Center"/>
+                        </Border>
+                        <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="2">
+                            <Label Text="Sin daños nuevos"
+                                   FontSize="15" FontAttributes="Bold"
+                                   TextColor="#1B3A1B"/>
+                            <Label x:Name="LblDanios"
+                                   Text="Pendiente"
+                                   FontSize="12" TextColor="#9E9E9E"/>
+                        </VerticalStackLayout>
+                        <Border Grid.Column="2" StrokeShape="Ellipse"
+                                Stroke="#E0E0E0" StrokeThickness="1.5"
+                                WidthRequest="40" HeightRequest="40" BackgroundColor="White">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnDaniosFallaTapped"/>
+                            </Border.GestureRecognizers>
+                            <Image x:Name="IcoDaniosFalla" Source="close_gray.png"
+                                   WidthRequest="18" HeightRequest="18"
+                                   HorizontalOptions="Center" VerticalOptions="Center"/>
+                        </Border>
+                        <Border Grid.Column="3" StrokeShape="Ellipse"
+                                Stroke="#E0E0E0" StrokeThickness="1.5"
+                                WidthRequest="40" HeightRequest="40" BackgroundColor="White">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnDaniosOkTapped"/>
+                            </Border.GestureRecognizers>
+                            <Image x:Name="IcoDaniosOk" Source="check_gray.png"
+                                   WidthRequest="18" HeightRequest="18"
+                                   HorizontalOptions="Center" VerticalOptions="Center"/>
+                        </Border>
+                    </Grid>
+                </Frame>
+
+                <!-- Llantas en buen estado -->
+                <Frame x:Name="ItemLlantas"
+                       BackgroundColor="White" CornerRadius="16"
+                       Padding="16,14" BorderColor="#E8F0E8" HasShadow="False">
+                    <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="14">
+                        <Border Grid.Column="0" BackgroundColor="#F0F8F0"
+                                StrokeShape="RoundRectangle 10"
+                                WidthRequest="44" HeightRequest="44">
+                            <Image Source="tire.png"
+                                   WidthRequest="22" HeightRequest="22"
+                                   HorizontalOptions="Center" VerticalOptions="Center"/>
+                        </Border>
+                        <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="2">
+                            <Label Text="Llantas en buen estado"
+                                   FontSize="15" FontAttributes="Bold"
+                                   TextColor="#1B3A1B"/>
+                            <Label x:Name="LblLlantas"
+                                   Text="Pendiente"
+                                   FontSize="12" TextColor="#9E9E9E"/>
+                        </VerticalStackLayout>
+                        <Border Grid.Column="2" StrokeShape="Ellipse"
+                                Stroke="#E0E0E0" StrokeThickness="1.5"
+                                WidthRequest="40" HeightRequest="40" BackgroundColor="White">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnLlantasFallaTapped"/>
+                            </Border.GestureRecognizers>
+                            <Image x:Name="IcoLlantasFalla" Source="close_gray.png"
+                                   WidthRequest="18" HeightRequest="18"
+                                   HorizontalOptions="Center" VerticalOptions="Center"/>
+                        </Border>
+                        <Border Grid.Column="3" StrokeShape="Ellipse"
+                                Stroke="#E0E0E0" StrokeThickness="1.5"
+                                WidthRequest="40" HeightRequest="40" BackgroundColor="White">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnLlantasOkTapped"/>
+                            </Border.GestureRecognizers>
+                            <Image x:Name="IcoLlantasOk" Source="check_gray.png"
+                                   WidthRequest="18" HeightRequest="18"
+                                   HorizontalOptions="Center" VerticalOptions="Center"/>
+                        </Border>
+                    </Grid>
+                </Frame>
+
+                <!-- Luces funcionando -->
+                <Frame x:Name="ItemLuces"
+                       BackgroundColor="White" CornerRadius="16"
+                       Padding="16,14" BorderColor="#E8F0E8" HasShadow="False">
+                    <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="14">
+                        <Border Grid.Column="0" BackgroundColor="#F0F8F0"
+                                StrokeShape="RoundRectangle 10"
+                                WidthRequest="44" HeightRequest="44">
+                            <Image Source="lightbulb.png"
+                                   WidthRequest="22" HeightRequest="22"
+                                   HorizontalOptions="Center" VerticalOptions="Center"/>
+                        </Border>
+                        <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="2">
+                            <Label Text="Luces funcionando"
+                                   FontSize="15" FontAttributes="Bold"
+                                   TextColor="#1B3A1B"/>
+                            <Label x:Name="LblLuces"
+                                   Text="Pendiente"
+                                   FontSize="12" TextColor="#9E9E9E"/>
+                        </VerticalStackLayout>
+                        <Border Grid.Column="2" StrokeShape="Ellipse"
+                                Stroke="#E0E0E0" StrokeThickness="1.5"
+                                WidthRequest="40" HeightRequest="40" BackgroundColor="White">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnLucesFallaTapped"/>
+                            </Border.GestureRecognizers>
+                            <Image x:Name="IcoLucesFalla" Source="close_gray.png"
+                                   WidthRequest="18" HeightRequest="18"
+                                   HorizontalOptions="Center" VerticalOptions="Center"/>
+                        </Border>
+                        <Border Grid.Column="3" StrokeShape="Ellipse"
+                                Stroke="#E0E0E0" StrokeThickness="1.5"
+                                WidthRequest="40" HeightRequest="40" BackgroundColor="White">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnLucesOkTapped"/>
+                            </Border.GestureRecognizers>
+                            <Image x:Name="IcoLucesOk" Source="check_gray.png"
+                                   WidthRequest="18" HeightRequest="18"
+                                   HorizontalOptions="Center" VerticalOptions="Center"/>
+                        </Border>
+                    </Grid>
+                </Frame>
+
+                <!-- Sin fugas visibles -->
+                <Frame x:Name="ItemFugas"
+                       BackgroundColor="White" CornerRadius="16"
+                       Padding="16,14" BorderColor="#E8F0E8" HasShadow="False">
+                    <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="14">
+                        <Border Grid.Column="0" BackgroundColor="#F0F8F0"
+                                StrokeShape="RoundRectangle 10"
+                                WidthRequest="44" HeightRequest="44">
+                            <Image Source="water_drop.png"
+                                   WidthRequest="22" HeightRequest="22"
+                                   HorizontalOptions="Center" VerticalOptions="Center"/>
+                        </Border>
+                        <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="2">
+                            <Label Text="Sin fugas visibles"
+                                   FontSize="15" FontAttributes="Bold"
+                                   TextColor="#1B3A1B"/>
+                            <Label x:Name="LblFugas"
+                                   Text="Pendiente"
+                                   FontSize="12" TextColor="#9E9E9E"/>
+                        </VerticalStackLayout>
+                        <Border Grid.Column="2" StrokeShape="Ellipse"
+                                Stroke="#E0E0E0" StrokeThickness="1.5"
+                                WidthRequest="40" HeightRequest="40" BackgroundColor="White">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnFugasFallaTapped"/>
+                            </Border.GestureRecognizers>
+                            <Image x:Name="IcoFugasFalla" Source="close_gray.png"
+                                   WidthRequest="18" HeightRequest="18"
+                                   HorizontalOptions="Center" VerticalOptions="Center"/>
+                        </Border>
+                        <Border Grid.Column="3" StrokeShape="Ellipse"
+                                Stroke="#E0E0E0" StrokeThickness="1.5"
+                                WidthRequest="40" HeightRequest="40" BackgroundColor="White">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnFugasOkTapped"/>
+                            </Border.GestureRecognizers>
+                            <Image x:Name="IcoFugasOk" Source="check_gray.png"
+                                   WidthRequest="18" HeightRequest="18"
+                                   HorizontalOptions="Center" VerticalOptions="Center"/>
+                        </Border>
+                    </Grid>
+                </Frame>
+
+                <!-- ── OBSERVACIÓN (opcional) ─────────────────── -->
+                <VerticalStackLayout Spacing="6">
+                    <HorizontalStackLayout Spacing="6">
+                        <Label Text="Observación"
+                               FontSize="13" FontAttributes="Bold"
+                               TextColor="#1B3A1B"
+                               VerticalOptions="Center"/>
+                        <Label Text="(opcional)"
+                               FontSize="12" TextColor="#9E9E9E"
+                               VerticalOptions="Center"/>
+                    </HorizontalStackLayout>
+                    <Frame BackgroundColor="White"
+                           CornerRadius="12"
+                           Padding="14,10"
+                           BorderColor="#C8DFC8"
+                           HasShadow="False">
+                        <Editor Placeholder="Detalle si algo requiere atención..."
+                                PlaceholderColor="#BDBDBD"
+                                TextColor="#1B3A1B"
+                                FontSize="14"
+                                Text="{Binding Observacion}"
+                                AutoSize="TextChanges"
+                                MinimumHeightRequest="80"
+                                MaxLength="400"/>
+                    </Frame>
+                </VerticalStackLayout>
+
+                <!-- Espaciado inferior para no quedar tapado por el botón fijo -->
+                <BoxView HeightRequest="8" Color="Transparent"/>
+
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <!-- ══════════════════════════════════════════════════════ -->
+        <!--  BOTÓN FIJO DE ENVÍO                                   -->
+        <!-- ══════════════════════════════════════════════════════ -->
+        <Grid Grid.Row="2"
+              BackgroundColor="White"
+              Padding="20,14,20,28">
+            <Button x:Name="BtnEnviar"
+                    Text="{Binding TextoBotonEnviar}"
+                    Command="{Binding EnviarCommand}"
+                    CornerRadius="16"
+                    HeightRequest="58"
+                    FontSize="17"
+                    FontAttributes="Bold"
+                    TextColor="White"
+                    IsEnabled="{Binding PuedeEnviar}">
+                <Button.Background>
+                    <LinearGradientBrush x:Name="BtnGradient"
+                                         StartPoint="0,0" EndPoint="1,0">
+                        <GradientStop x:Name="BtnStop1" Color="#1B8A3A" Offset="0.0"/>
+                        <GradientStop x:Name="BtnStop2" Color="#4CAF50" Offset="1.0"/>
+                    </LinearGradientBrush>
+                </Button.Background>
+            </Button>
+        </Grid>
+
+        <!-- ─── TOAST LOCAL (confirmación de envío) ────────────── -->
+        <Frame x:Name="ToastFrame"
+               CornerRadius="16"
+               Padding="18,14"
+               IsVisible="False"
+               HorizontalOptions="Center"
+               VerticalOptions="End"
+               Margin="24,0,24,100"
+               HasShadow="True"
+               Opacity="0"
+               ZIndex="99">
+            <HorizontalStackLayout Spacing="10" HorizontalOptions="Center">
+                <Image x:Name="ToastIcon"
+                       WidthRequest="22" HeightRequest="22"
+                       VerticalOptions="Center"/>
+                <Label x:Name="ToastLabel"
+                       TextColor="White"
+                       FontAttributes="Bold"
+                       FontSize="15"
+                       VerticalOptions="Center"/>
+            </HorizontalStackLayout>
+        </Frame>
+
+    </Grid>
 </ContentPage>

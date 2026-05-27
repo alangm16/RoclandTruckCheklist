@@ -11,7 +11,8 @@ namespace RoclandTruckCheck.Mobile
         public App(AuthStateService auth)
         {
             InitializeComponent();
-            _auth = auth;   
+            _auth = auth;
+            MainPage = new AppShell();
         }
 
         protected override async void OnStart()

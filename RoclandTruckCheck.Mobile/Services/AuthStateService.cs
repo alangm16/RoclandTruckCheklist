@@ -11,10 +11,12 @@ public class AuthStateService
 
     private const int SesionMinutos = 2;
     private readonly ApiService _apiService;
+    private readonly SesionGuardia _sesion;
 
-    public AuthStateService(ApiService apiService)
+    public AuthStateService(ApiService apiService, SesionGuardia sesion)
     {
         _apiService = apiService;
+        _sesion = sesion;
     }
 
     public void GuardarSesion(string token, string nombre, int id)
@@ -100,29 +102,34 @@ public class AuthStateService
 
     private async Task<bool> ProcesarSesionExitosa(LoginResponse loginResponse)
     {
-        // 1. Configuramos el token temporalmente en el ApiService para poder hacer la petición
         _apiService.SetAuthToken(loginResponse.Token);
 
-        // 2. Consumimos el endpoint 'mi-perfil'
-        // Aquí es donde tu backend valida que el token sea Directo, que el rol sea 'Guardia' y la plataforma 'Mobile'.
         var perfil = await _apiService.ObtenerMiPerfilAsync();
-
-        // 3. Validamos la respuesta
         if (perfil == null || perfil.NombreRol != "Guardia")
         {
-            // El backend rechazó el acceso (ej. un Gerente intentó loguearse en la app móvil)
             CerrarSesion();
             return false;
         }
 
-        // 4. Si todo está en orden, guardamos la sesión en el SecureStorage.
-        // Nota: Tomamos el NombreCompleto y el UsuarioId directamente del loginResponse 
-        // ya que SuperAdmin nos los envía en la primera respuesta.
         GuardarSesion(
             token: loginResponse.Token,
             nombre: loginResponse.NombreCompleto,
             id: loginResponse.UsuarioId
         );
+
+        // ── Poblar SesionGuardia con catálogos y datos del guardia ──
+        _sesion.UsuarioId = loginResponse.UsuarioId;
+        _sesion.NombreCompleto = loginResponse.NombreCompleto;
+        _sesion.Token = loginResponse.Token;
+        _sesion.TokenExpiracion = loginResponse.Expiracion;
+
+        var catalogos = await _apiService.ObtenerCatalogosAsync();
+        if (catalogos != null)
+        {
+            _sesion.Vehiculos = catalogos.Vehiculos;
+            _sesion.Sucursales = catalogos.Sucursales;
+            _sesion.Choferes = catalogos.Choferes;
+        }
 
         return true;
     }

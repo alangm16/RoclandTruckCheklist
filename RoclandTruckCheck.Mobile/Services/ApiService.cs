@@ -136,4 +136,55 @@ public class  ApiService
         }
     }
 
+    // ======================== GUARDIAS ========================
+
+    public async Task<CatalogosMobileResponse?> ObtenerCatalogosAsync()
+    {
+        try
+        {
+            SetAuthHeader();
+            var response = await _http.GetAsync($"{ApiBasePath}/Guardias/catalogos");
+
+            if (!response.IsSuccessStatusCode) return null;
+
+            return await response.Content.ReadFromJsonAsync<CatalogosMobileResponse>(JsonOpts);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"ObtenerCatalogosAsync error: {ex.Message}");
+            return null;
+        }
+    }
+
+    public async Task<(int Id, string Mensaje)?> RegistrarChecklistAsync(CrearChecklistRequest request)
+    {
+        try
+        {
+            SetAuthHeader();
+            var response = await _http.PostAsJsonAsync($"{ApiBasePath}/Guardias/checklist", request);
+            var rawJson = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                MainThread.BeginInvokeOnMainThread(async () =>
+                {
+                    await Shell.Current.DisplayAlertAsync("Error al registrar", $"Status: {response.StatusCode}\n{rawJson}", "OK");
+                });
+                return null;
+            }
+
+            var resultado = JsonSerializer.Deserialize<CrearChecklistResponse>(rawJson, JsonOpts);
+            if (resultado == null) return null;
+
+            return (resultado.Id, resultado.Mensaje);
+        }
+        catch (Exception ex)
+        {
+            MainThread.BeginInvokeOnMainThread(async () =>
+            {
+                await Shell.Current.DisplayAlertAsync("Error de conexión", ex.Message, "OK");
+            });
+            return null;
+        }
+    }
 }

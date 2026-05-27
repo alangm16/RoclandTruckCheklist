@@ -50,13 +50,33 @@ public class AuthStateService
                 !DateTime.TryParse(expiraStr, null, System.Globalization.DateTimeStyles.RoundtripKind, out var expira) ||
                 DateTime.UtcNow >= expira)
             {
-                CerrarSesion(); // limpiar tokens vencidos
+                CerrarSesion();
                 return false;
             }
 
+            // 1. Restaurar propiedades de la clase
             Token = token;
             NombreGuardia = nombre ?? "";
             GuardiaId = int.Parse(idStr);
+
+            // 2. CONFIGURAR EL TOKEN PARA LAS PETICIONES API
+            _apiService.SetAuthToken(token);
+
+            // 3. POBLAR EL OBJETO SESIONGUARDIA INYECTADO
+            _sesion.Token = token;
+            _sesion.NombreCompleto = NombreGuardia;
+            _sesion.UsuarioId = GuardiaId;
+            _sesion.TokenExpiracion = expira;
+
+            // 4. DESCARGAR CATÁLOGOS NUEVAMENTE PARA TENERLOS LISTOS
+            var catalogos = await _apiService.ObtenerCatalogosAsync();
+            if (catalogos != null)
+            {
+                _sesion.Vehiculos = catalogos.Vehiculos;
+                _sesion.Sucursales = catalogos.Sucursales;
+                _sesion.Choferes = catalogos.Choferes;
+            }
+
             return true;
         }
         catch

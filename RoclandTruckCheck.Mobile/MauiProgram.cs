@@ -4,6 +4,7 @@ using ZXing.Net.Maui.Controls;
 using RoclandTruckCheck.Mobile.Services;
 using RoclandTruckCheck.Mobile.ViewModels;
 using RoclandTruckCheck.Mobile.Views;
+using RoclandTruckCheck.Mobile.Models;
 
 namespace RoclandTruckCheck.Mobile
 {
@@ -24,7 +25,7 @@ namespace RoclandTruckCheck.Mobile
 
             builder.Services.AddSingleton<ApiService>();
             builder.Services.AddSingleton<AuthStateService>();
-            //builder.Services.AddSingleton<SesionGuardia>();
+            builder.Services.AddSingleton<SesionGuardia>();
 
             builder.Services.AddTransient<LoginViewModel>();
             builder.Services.AddTransient<TipoAccesoViewModel>();

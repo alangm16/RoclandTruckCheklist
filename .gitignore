@@ -1,0 +1,92 @@
+############################################
+# .NET / Visual Studio
+############################################
+bin/
+obj/
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.cache
+*.log
+
+############################################
+# Build results
+############################################
+[Bb]uild/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+ARM/
+ARM64/
+
+############################################
+# Visual Studio Code
+############################################
+.vscode/
+
+############################################
+# NuGet
+############################################
+*.nupkg
+*.snupkg
+.nuget/
+packages/
+project.lock.json
+project.fragment.lock.json
+
+############################################
+# .NET MAUI / Xamarin
+############################################
+# Android
+**/android/bin/
+**/android/obj/
+**/Android/bin/
+**/Android/obj/
+*.apk
+*.aab
+*.keystore
+*.jks
+
+# iOS / MacCatalyst
+**/iOS/bin/
+**/iOS/obj/
+**/MacCatalyst/bin/
+**/MacCatalyst/obj/
+*.app
+*.dSYM
+*.ipa
+
+############################################
+# Rider / JetBrains (por si acaso)
+############################################
+.idea/
+*.sln.iml
+
+############################################
+# OS files
+############################################
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+############################################
+# Logs & temp
+############################################
+*.tmp
+*.temp
+*.bak
+*.swp
+
+############################################
+# Publish
+############################################
+publish/

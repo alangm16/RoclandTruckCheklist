@@ -7,10 +7,10 @@
              Shell.NavBarIsVisible="False"
              BackgroundColor="#F0F4F0">
 
-    <!-- ════════ GRID RAÍZ: contenido + toast flotante ════════ -->
+    <!-- ═════════ GRID RAÍZ ═════════ -->
     <Grid>
 
-        <!-- ─── TOAST ─────────────────────────────────────────── -->
+        <!-- ───────── TOAST ───────── -->
         <Frame x:Name="ToastFrame"
                BackgroundColor="#1B3A1B"
                CornerRadius="16"
@@ -22,20 +22,19 @@
                HasShadow="True"
                Opacity="0"
                ZIndex="99">
-            <HorizontalStackLayout Spacing="10" HorizontalOptions="Center">
+            <HorizontalStackLayout Spacing="10">
                 <Image x:Name="ToastIcon"
                        Source="icon_check.png"
-                       WidthRequest="20" HeightRequest="20"
-                       VerticalOptions="Center"/>
+                       WidthRequest="20"
+                       HeightRequest="20"/>
                 <Label x:Name="ToastLabel"
                        TextColor="White"
                        FontAttributes="Bold"
-                       FontSize="15"
-                       VerticalOptions="Center"/>
+                       FontSize="15"/>
             </HorizontalStackLayout>
         </Frame>
 
-        <!-- ─── DIÁLOGO DE LOGOUT ──────────────────────────────── -->
+        <!-- ───────── OVERLAY LOGOUT ───────── -->
         <Grid x:Name="OverlayLogout"
               IsVisible="False"
               BackgroundColor="#99000000"
@@ -49,18 +48,23 @@
                    HasShadow="True">
                 <VerticalStackLayout Spacing="20">
                     <Image Source="icon_logout.png"
-                           WidthRequest="56" HeightRequest="56"
+                           WidthRequest="56"
+                           HeightRequest="56"
                            HorizontalOptions="Center"/>
                     <Label Text="¿Cerrar sesión?"
-                           FontSize="20" FontAttributes="Bold"
+                           FontSize="20"
+                           FontAttributes="Bold"
                            TextColor="#1B3A1B"
                            HorizontalOptions="Center"/>
                     <Label Text="Se cerrará tu turno activo."
-                           FontSize="14" TextColor="#5A7A5A"
-                           HorizontalOptions="Center"
+                           FontSize="14"
+                           TextColor="#5A7A5A"
                            HorizontalTextAlignment="Center"/>
-                    <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
-                        <Button Grid.Column="0"
+                    <Grid ColumnDefinitions="*,*"
+                          ColumnSpacing="12">
+
+                                    <!-- Cancelar -->
+                                    <Button Grid.Column="0"
                                 Text="Cancelar"
                                 BackgroundColor="#E8F5E9"
                                 TextColor="#2D6A2D"
@@ -68,222 +72,190 @@
                                 CornerRadius="12"
                                 HeightRequest="50"
                                 Clicked="OnCancelarLogoutClicked"/>
-                        <Button Grid.Column="1"
-                                Text="Salir"
+
+                                    <!-- Acción destructiva -->
+                                    <Button Grid.Column="1"
+                                Text="Cerrar sesión"
                                 BackgroundColor="#C62828"
                                 TextColor="White"
                                 FontAttributes="Bold"
                                 CornerRadius="12"
                                 HeightRequest="50"
                                 Clicked="OnConfirmarLogoutClicked"/>
+                                </Grid>
+                            </VerticalStackLayout>
+                        </Frame>
                     </Grid>
-                </VerticalStackLayout>
-            </Frame>
-        </Grid>
 
-        <!-- ─── CONTENIDO PRINCIPAL ───────────────────────────── -->
-        <Grid RowDefinitions="Auto,*,Auto">
+        <!-- ═════════ CONTENIDO PRINCIPAL ═════════ -->
+        <Grid RowDefinitions="Auto,*">
 
-            <!-- ══ HEADER: franja verde con datos del guardia ══ -->
+            <!-- ───────── HEADER ───────── -->
             <Grid Grid.Row="0"
                   Padding="20,48,20,24"
                   ColumnDefinitions="Auto,*,Auto">
                 <Grid.Background>
                     <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                        <GradientStop Color="#1B3A1B" Offset="0.0"/>
+                        <GradientStop Color="#1B3A1B" Offset="0"/>
                         <GradientStop Color="#2D6A2D" Offset="0.6"/>
-                        <GradientStop Color="#4CAF50" Offset="1.0"/>
+                        <GradientStop Color="#4CAF50" Offset="1"/>
                     </LinearGradientBrush>
                 </Grid.Background>
 
-                <!-- Avatar del guardia -->
-                <Border Grid.Column="0"
-                        WidthRequest="52" HeightRequest="52"
+                <Border WidthRequest="52"
+                        HeightRequest="52"
                         StrokeShape="Ellipse"
                         Stroke="#4CAF50"
                         StrokeThickness="2"
-                        BackgroundColor="#2D6A2D"
-                        VerticalOptions="Center">
+                        BackgroundColor="#2D6A2D">
                     <Image Source="truck_icon.png"
-                           WidthRequest="30" HeightRequest="30"
+                           WidthRequest="30"
+                           HeightRequest="30"
                            HorizontalOptions="Center"
                            VerticalOptions="Center"/>
                 </Border>
 
-                <!-- Nombre y rol -->
                 <VerticalStackLayout Grid.Column="1"
                                      Margin="14,0,0,0"
-                                     VerticalOptions="Center"
-                                     Spacing="2">
+                                     VerticalOptions="Center">
                     <Label Text="Guardia en turno"
                            FontSize="11"
                            TextColor="#A5D6A7"
-                           FontAttributes="Bold"
-                           CharacterSpacing="1"/>
+                           FontAttributes="Bold"/>
                     <Label Text="{Binding NombreGuardia}"
                            FontSize="18"
                            FontAttributes="Bold"
                            TextColor="White"/>
                 </VerticalStackLayout>
 
-                <!-- Botón Logout -->
                 <Button Grid.Column="2"
-                        ImageSource="icon_logout.png"
+                        ImageSource="icon_exit.png"
                         BackgroundColor="#1A4CAF50"
                         BorderColor="#4CAF50"
                         BorderWidth="1"
                         CornerRadius="10"
-                        WidthRequest="44" HeightRequest="44"
-                        VerticalOptions="Center"
+                        WidthRequest="44"
+                        HeightRequest="44"
                         Clicked="OnLogoutClicked"/>
             </Grid>
 
-            <!-- ══ CUERPO: cards de selección ══ -->
-            <ScrollView Grid.Row="1" VerticalScrollBarVisibility="Never">
-                <VerticalStackLayout Padding="20,28,20,20" Spacing="16">
+            <!-- ═════════ CUERPO QUE SE EXPANDE ═════════ -->
+            <Grid Grid.Row="1"
+                  Padding="20,28,20,20"
+                  RowDefinitions="Auto,*,*"
+                  RowSpacing="20">
 
-                    <!-- Subtítulo -->
-                    <VerticalStackLayout Spacing="4" Margin="0,0,0,8">
-                        <Label Text="¿Qué vas a registrar?"
-                               FontSize="13"
-                               TextColor="#5A7A5A"
-                               FontAttributes="Bold"
-                               CharacterSpacing="0.5"/>
-                        <Label Text="Elige el tipo de movimiento"
-                               FontSize="26"
-                               FontAttributes="Bold"
-                               TextColor="#1B3A1B"/>
-                    </VerticalStackLayout>
-
-                    <!-- ╔══════════════════╗ -->
-                    <!-- ║   CARD ENTRADA   ║ -->
-                    <!-- ╚══════════════════╝ -->
-                    <Frame x:Name="CardEntrada"
-                           Padding="0"
-                           CornerRadius="24"
-                           HasShadow="True"
-                           BorderColor="Transparent"
-                           HeightRequest="190">
-                        <Frame.Background>
-                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                <GradientStop Color="#1B8A3A" Offset="0.0"/>
-                                <GradientStop Color="#2ECC6A" Offset="0.7"/>
-                                <GradientStop Color="#54E88A" Offset="1.0"/>
-                            </LinearGradientBrush>
-                        </Frame.Background>
-                        <Frame.GestureRecognizers>
-                            <TapGestureRecognizer Tapped="OnEntradaTapped"/>
-                        </Frame.GestureRecognizers>
-
-                        <Grid Padding="28,22" ColumnDefinitions="*,Auto">
-
-                            <!-- Texto izquierda -->
-                            <VerticalStackLayout Grid.Column="0"
-                                                 VerticalOptions="Center"
-                                                 Spacing="6">
-                                <Label Text="REGISTRAR"
-                                       FontSize="11"
-                                       FontAttributes="Bold"
-                                       TextColor="#A8FFD0"
-                                       CharacterSpacing="2"/>
-                                <Label Text="Entrada"
-                                       FontSize="38"
-                                       FontAttributes="Bold"
-                                       TextColor="White"/>
-                                <Label Text="Unidad llegando al CEDIS o sucursal"
-                                       FontSize="13"
-                                       TextColor="#C8FFE0"/>
-                            </VerticalStackLayout>
-
-                            <!-- Ícono derecha -->
-                            <Border Grid.Column="1"
-                                    WidthRequest="64" HeightRequest="64"
-                                    StrokeShape="Ellipse"
-                                    BackgroundColor="#22FFFFFF"
-                                    VerticalOptions="Center">
-                                <Image Source="arrow_down.png"
-                                       WidthRequest="32" HeightRequest="32"
-                                       HorizontalOptions="Center"
-                                       VerticalOptions="Center"/>
-                            </Border>
-                        </Grid>
-                    </Frame>
-
-                    <!-- ╔══════════════════╗ -->
-                    <!-- ║   CARD SALIDA    ║ -->
-                    <!-- ╚══════════════════╝ -->
-                    <Frame x:Name="CardSalida"
-                           Padding="0"
-                           CornerRadius="24"
-                           HasShadow="True"
-                           BorderColor="Transparent"
-                           HeightRequest="190">
-                        <Frame.Background>
-                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                <GradientStop Color="#B84A00" Offset="0.0"/>
-                                <GradientStop Color="#F06000" Offset="0.6"/>
-                                <GradientStop Color="#FF8C30" Offset="1.0"/>
-                            </LinearGradientBrush>
-                        </Frame.Background>
-                        <Frame.GestureRecognizers>
-                            <TapGestureRecognizer Tapped="OnSalidaTapped"/>
-                        </Frame.GestureRecognizers>
-
-                        <Grid Padding="28,22" ColumnDefinitions="*,Auto">
-
-                            <!-- Texto izquierda -->
-                            <VerticalStackLayout Grid.Column="0"
-                                                 VerticalOptions="Center"
-                                                 Spacing="6">
-                                <Label Text="REGISTRAR"
-                                       FontSize="11"
-                                       FontAttributes="Bold"
-                                       TextColor="#FFD8A8"
-                                       CharacterSpacing="2"/>
-                                <Label Text="Salida"
-                                       FontSize="38"
-                                       FontAttributes="Bold"
-                                       TextColor="White"/>
-                                <Label Text="Unidad saliendo a ruta o destino"
-                                       FontSize="13"
-                                       TextColor="#FFE4C8"/>
-                            </VerticalStackLayout>
-
-                            <!-- Ícono derecha -->
-                            <Border Grid.Column="1"
-                                    WidthRequest="64" HeightRequest="64"
-                                    StrokeShape="Ellipse"
-                                    BackgroundColor="#22FFFFFF"
-                                    VerticalOptions="Center">
-                                <Image Source="arrow_up.png"
-                                       WidthRequest="32" HeightRequest="32"
-                                       HorizontalOptions="Center"
-                                       VerticalOptions="Center"/>
-                            </Border>
-                        </Grid>
-                    </Frame>
-
-                </VerticalStackLayout>
-            </ScrollView>
-
-            <!-- ══ PIE: contador de registros del turno ══ -->
-            <Frame Grid.Row="2"
-                   BackgroundColor="White"
-                   BorderColor="#E0E8E0"
-                   CornerRadius="0"
-                   Padding="20,12"
-                   HasShadow="False">
-                <HorizontalStackLayout Spacing="10" HorizontalOptions="Center">
-                    <Image Source="clipboard.png"
-                           WidthRequest="18" HeightRequest="18"
-                           VerticalOptions="Center"
-                           Opacity="0.6"/>
-                    <Label Text="{Binding ResumenTurno}"
+                <!-- Subtítulo -->
+                <VerticalStackLayout Grid.Row="0"
+                                     Spacing="4"
+                                     Margin="0,0,0,8">
+                    <Label Text="¿Qué vas a registrar?"
                            FontSize="13"
                            TextColor="#5A7A5A"
-                           VerticalOptions="Center"/>
-                </HorizontalStackLayout>
-            </Frame>
+                           FontAttributes="Bold"/>
+                    <Label Text="Elige el tipo de movimiento"
+                           FontSize="26"
+                           FontAttributes="Bold"
+                           TextColor="#1B3A1B"/>
+                </VerticalStackLayout>
+
+                <!-- CARD ENTRADA -->
+                <Frame Grid.Row="1"
+                       x:Name="CardEntrada"
+                       Padding="0"
+                       CornerRadius="24"
+                       HasShadow="True"
+                       VerticalOptions="FillAndExpand">
+                    <Frame.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                            <GradientStop Color="#1B8A3A" Offset="0"/>
+                            <GradientStop Color="#2ECC6A" Offset="0.7"/>
+                            <GradientStop Color="#54E88A" Offset="1"/>
+                        </LinearGradientBrush>
+                    </Frame.Background>
+                    <Frame.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="OnEntradaTapped"/>
+                    </Frame.GestureRecognizers>
+
+                    <Grid Padding="28"
+                          ColumnDefinitions="*,Auto">
+                        <VerticalStackLayout VerticalOptions="Center">
+                            <Label Text="REGISTRAR"
+                                   FontSize="11"
+                                   FontAttributes="Bold"
+                                   TextColor="#A8FFD0"/>
+                            <Label Text="Entrada"
+                                   FontSize="48"
+                                   FontAttributes="Bold"
+                                   TextColor="White"/>
+                            <Label Text="Unidad llegando al CEDIS o sucursal"
+                                   FontSize="14"
+                                   TextColor="#C8FFE0"/>
+                        </VerticalStackLayout>
+
+                        <Border Grid.Column="1"
+                                WidthRequest="80"
+                                HeightRequest="80"
+                                StrokeShape="Ellipse"
+                                BackgroundColor="#22FFFFFF">
+                            <Image Source="arrow_down.png"
+                                   WidthRequest="40"
+                                   HeightRequest="40"
+                                   HorizontalOptions="Center"
+                                   VerticalOptions="Center"/>
+                        </Border>
+                    </Grid>
+                </Frame>
+
+                <!-- CARD SALIDA -->
+                <Frame Grid.Row="2"
+                       x:Name="CardSalida"
+                       Padding="0"
+                       CornerRadius="24"
+                       HasShadow="True"
+                       VerticalOptions="FillAndExpand">
+                    <Frame.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                            <GradientStop Color="#B84A00" Offset="0"/>
+                            <GradientStop Color="#F06000" Offset="0.6"/>
+                            <GradientStop Color="#FF8C30" Offset="1"/>
+                        </LinearGradientBrush>
+                    </Frame.Background>
+                    <Frame.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="OnSalidaTapped"/>
+                    </Frame.GestureRecognizers>
+
+                    <Grid Padding="28"
+                          ColumnDefinitions="*,Auto">
+                        <VerticalStackLayout VerticalOptions="Center">
+                            <Label Text="REGISTRAR"
+                                   FontSize="11"
+                                   FontAttributes="Bold"
+                                   TextColor="#FFD8A8"/>
+                            <Label Text="Salida"
+                                   FontSize="48"
+                                   FontAttributes="Bold"
+                                   TextColor="White"/>
+                            <Label Text="Unidad saliendo a ruta o destino"
+                                   FontSize="14"
+                                   TextColor="#FFE4C8"/>
+                        </VerticalStackLayout>
+
+                        <Border Grid.Column="1"
+                                WidthRequest="80"
+                                HeightRequest="80"
+                                StrokeShape="Ellipse"
+                                BackgroundColor="#22FFFFFF">
+                            <Image Source="arrow_up.png"
+                                   WidthRequest="40"
+                                   HeightRequest="40"
+                                   HorizontalOptions="Center"
+                                   VerticalOptions="Center"/>
+                        </Border>
+                    </Grid>
+                </Frame>
+
+            </Grid>
 
         </Grid>
 

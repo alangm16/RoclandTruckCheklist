@@ -53,7 +53,7 @@
                                FontSize="26" FontAttributes="Bold"
                                TextColor="White" HorizontalOptions="Center"
                                CharacterSpacing="5"/>
-                        <Label Text="Relevo de Turno"
+                        <Label Text="Checklist de Camiones"
                                FontSize="13" TextColor="#C8E6C9"
                                HorizontalOptions="Center"/>
                     </VerticalStackLayout>

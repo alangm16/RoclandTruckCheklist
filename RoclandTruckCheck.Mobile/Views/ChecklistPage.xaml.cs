@@ -26,8 +26,14 @@ public partial class ChecklistPage : ContentPage
         _vm = vm;
         BindingContext = vm;
 
-        // Suscribirse al evento de envío exitoso para mostrar toast y navegar
+        // Suscribirse al evento de envío exitoso para mostrar modal y navegar
         _vm.OnRegistroEnviado += OnRegistroEnviadoHandler;
+
+        _vm.PropertyChanged += (s, e) =>
+        {
+            if (e.PropertyName == nameof(ChecklistViewModel.PuedeEnviar))
+                ActualizarColorBoton();
+        };
     }
 
     // ─────────────────────────────────────────────────────────────────
@@ -45,6 +51,8 @@ public partial class ChecklistPage : ContentPage
         // Botón enviar
         BtnStop1.Color = esEntrada ? Color.FromArgb("#1B8A3A") : Color.FromArgb("#B84A00");
         BtnStop2.Color = esEntrada ? Color.FromArgb("#4CAF50") : Color.FromArgb("#F06000");
+        ActualizarColorBoton();
+
     }
 
     // ─────────────────────────────────────────────────────────────────
@@ -98,9 +106,9 @@ public partial class ChecklistPage : ContentPage
         icoOk.Source = "check_green.png";
         icoFalla.Source = "close_gray.png";
         lbl.Text = "✓  OK";
-        lbl.TextColor = Color.FromArgb("#2E7D32");
-        frame.BorderColor = Color.FromArgb("#A5D6A7");
-        frame.BackgroundColor = Color.FromArgb("#F1FBF1");
+        lbl.TextColor = Color.FromArgb("#155724");
+        frame.BorderColor = Color.FromArgb("#4CAF50");
+        frame.BackgroundColor = Color.FromArgb("#E8F5E9");
     }
 
     private static void AplicarEstadoFalla(Image icoOk, Image icoFalla, Label lbl, Frame frame)
@@ -108,9 +116,9 @@ public partial class ChecklistPage : ContentPage
         icoFalla.Source = "close_red.png";
         icoOk.Source = "check_gray.png";
         lbl.Text = "✗  Falla";
-        lbl.TextColor = Color.FromArgb("#C62828");
-        frame.BorderColor = Color.FromArgb("#FFCDD2");
-        frame.BackgroundColor = Color.FromArgb("#FFF8F8");
+        lbl.TextColor = Color.FromArgb("#B71C1C");
+        frame.BorderColor = Color.FromArgb("#EF5350");
+        frame.BackgroundColor = Color.FromArgb("#FFEBEE");
     }
 
     private static void ResetearBotones(Image icoOk, Image icoFalla, Label lbl, Frame frame)
@@ -128,6 +136,34 @@ public partial class ChecklistPage : ContentPage
         _vm.ActualizarItems(
             _candados, _licencia, _danios,
             _llantas, _luces, _fugas);
+
+        //ActualizarColorBoton();
+    }
+
+    private void ActualizarColorBoton()
+    {
+        if (!_vm.PuedeEnviar)
+        {
+            // Modo deshabilitado → gris
+            BtnStop1.Color = Colors.Gray;
+            BtnStop2.Color = Color.FromArgb("#BDBDBD");
+        }
+        else
+        {
+            // Modo habilitado → recuperamos los colores según el tipo (entrada/salida)
+            bool esEntrada = _vm.TipoRegistro == TipoRegistro.Entrada; // Necesitas exponer TipoRegistro en el VM
+
+            if (esEntrada)
+            {
+                BtnStop1.Color = Color.FromArgb("#1B8A3A");
+                BtnStop2.Color = Color.FromArgb("#4CAF50");
+            }
+            else
+            {
+                BtnStop1.Color = Color.FromArgb("#B84A00");
+                BtnStop2.Color = Color.FromArgb("#F06000");
+            }
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────
@@ -161,6 +197,7 @@ public partial class ChecklistPage : ContentPage
         AplicarEstadoOk(IcoFugasOk, IcoFugasFalla, LblFugas, ItemFugas);
 
         SincronizarConViewModel();
+        ActualizarColorBoton();
     }
 
     private void HandleLimpiar()
@@ -175,35 +212,32 @@ public partial class ChecklistPage : ContentPage
         ResetearBotones(IcoFugasOk, IcoFugasFalla, LblFugas, ItemFugas);
 
         SincronizarConViewModel();
+        ActualizarColorBoton();
     }
 
     // ─────────────────────────────────────────────────────────────────
-    // ENVÍO EXITOSO — toast + navegación de vuelta
+    // MODAL DE ÉXITO — desaparece automáticamente en 3 segundos
     // ─────────────────────────────────────────────────────────────────
 
     private async void OnRegistroEnviadoHandler(string mensaje)
     {
-        await MostrarToastAsync(mensaje, exito: true);
-        await Task.Delay(600); // deja ver el toast antes de salir
+        await MostrarModalExitoAsync(mensaje);
+        await Task.Delay(600); // deja ver el modal antes de salir
         await Shell.Current.GoToAsync("..");
     }
 
-    private async Task MostrarToastAsync(string mensaje, bool exito)
+    private async Task MostrarModalExitoAsync(string mensaje)
     {
-        ToastIcon.Source = exito ? "icon_check.png" : "icon_exit.png";
-        ToastLabel.Text = mensaje;
-        ToastFrame.BackgroundColor = exito
-            ? Color.FromArgb("#1B3A1B")
-            : Color.FromArgb("#B71C1C");
+        SuccessLabel.Text = mensaje;
+        SuccessOverlay.Opacity = 0;
+        SuccessOverlay.IsVisible = true;
 
-        ToastFrame.IsVisible = true;
-        ToastFrame.Opacity = 0;
+        await SuccessOverlay.FadeTo(1, 200, Easing.CubicOut);
 
-        await ToastFrame.FadeToAsync(1, 220);
-        await Task.Delay(exito ? 2800 : 3200);
-        await ToastFrame.FadeToAsync(0, 280);
+        await Task.Delay(3000);
 
-        ToastFrame.IsVisible = false;
+        await SuccessOverlay.FadeTo(0, 200, Easing.CubicIn);
+        SuccessOverlay.IsVisible = false;
     }
 
     // ─────────────────────────────────────────────────────────────────

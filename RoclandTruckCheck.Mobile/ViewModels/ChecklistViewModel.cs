@@ -26,6 +26,8 @@ public partial class ChecklistViewModel : ObservableObject
     [ObservableProperty]
     private string _textoBotonEnviar = "Enviar entrada";
 
+    public TipoRegistro TipoRegistro { get; private set; }
+
     // ── Catálogos ─────────────────────────────────────────────────
     [ObservableProperty]
     private ObservableCollection<SucursalDto> _sucursales = new();
@@ -35,6 +37,8 @@ public partial class ChecklistViewModel : ObservableObject
 
     [ObservableProperty]
     private ObservableCollection<ChoferDto> _choferes = new();
+    [ObservableProperty]
+    private ObservableCollection<ZonaDto> _zonasDanio = new();
 
     [ObservableProperty]
     private SucursalDto? _sucursalSeleccionada;
@@ -44,6 +48,9 @@ public partial class ChecklistViewModel : ObservableObject
 
     [ObservableProperty]
     private ChoferDto? _choferSeleccionado;
+
+    [ObservableProperty]
+    private ObservableCollection<CrearChecklistDanioRequest> _daniosSeleccionados = new();
 
     // ── Observación ───────────────────────────────────────────────
     [ObservableProperty]
@@ -74,17 +81,17 @@ public partial class ChecklistViewModel : ObservableObject
 
     public void InicializarConTipo(TipoRegistro tipo)
     {
+        TipoRegistro = tipo;
         _tipoRegistro = tipo;
+
         TituloTipo = tipo.ToString().ToUpper();
-        TextoBotonEnviar = tipo == TipoRegistro.Entrada ? "Enviar entrada" : "Enviar salida";
+        TextoBotonEnviar = tipo == TipoRegistro.Entrada
+            ? "Enviar entrada"
+            : "Enviar salida";
 
         CargarCatalogosDesdeCache();
 
-        // Entrada → preseleccionar CEDIS
-        if (tipo == TipoRegistro.Entrada && _sesion.SucursalCedis != null)
-            SucursalSeleccionada = Sucursales
-                .FirstOrDefault(s => s.Id == _sesion.SucursalCedis.Id);
-
+        PuedeEnviar = false;
         ActualizarPuedeEnviar();
     }
 
@@ -93,6 +100,7 @@ public partial class ChecklistViewModel : ObservableObject
         Sucursales = new ObservableCollection<SucursalDto>(_sesion.Sucursales);
         Vehiculos = new ObservableCollection<VehiculoDto>(_sesion.Vehiculos);
         Choferes = new ObservableCollection<ChoferDto>(_sesion.Choferes);
+        ZonasDanio = new ObservableCollection<ZonaDto>(_sesion.ZonasDanio.Where(z => z.Activo));
     }
 
     // ─────────────────────────────────────────────────────────────────
@@ -126,10 +134,19 @@ public partial class ChecklistViewModel : ObservableObject
 
     private void ActualizarPuedeEnviar()
     {
+        bool checklistCompleto =
+            _candados.HasValue &&
+            _licencia.HasValue &&
+            _danios.HasValue &&
+            _llantas.HasValue &&
+            _luces.HasValue &&
+            _fugas.HasValue;
+
         PuedeEnviar =
             SucursalSeleccionada != null &&
             VehiculoSeleccionado != null &&
-            ChoferSeleccionado != null;
+            ChoferSeleccionado != null &&
+            checklistCompleto;
     }
 
     // ─────────────────────────────────────────────────────────────────
@@ -144,6 +161,7 @@ public partial class ChecklistViewModel : ObservableObject
     {
         Observacion = null;
         OnLimpiar?.Invoke();
+        DaniosSeleccionados.Clear();
     }
 
     [RelayCommand]
@@ -164,7 +182,8 @@ public partial class ChecklistViewModel : ObservableObject
             LlantasBienEstado = _llantas ?? false,
             LucesFuncionando = _luces ?? false,
             SinFugasVisibles = _fugas ?? false,
-            Observacion = Observacion
+            Observacion = Observacion,
+            DaniosReportados = DaniosSeleccionados.ToList()
         };
 
         var resultado = await _api.RegistrarChecklistAsync(request);
@@ -174,6 +193,27 @@ public partial class ChecklistViewModel : ObservableObject
             _tipoAccesoVm.IncrementarRegistros();
             OnRegistroEnviado?.Invoke(resultado.Value.Mensaje);
         }
-        // Si es null, el ApiService ya mostró el alert de error
+    }
+
+    public void AgregarDanio(int idZona, string? notas = null)
+    {
+        // Evitar duplicados
+        if (!DaniosSeleccionados.Any(d => d.IdZonaDanio == idZona))
+        {
+            DaniosSeleccionados.Add(new CrearChecklistDanioRequest
+            {
+                IdZonaDanio = idZona,
+                Notas = notas
+            });
+        }
+    }
+
+    public void RemoverDanio(int idZona)
+    {
+        var danio = DaniosSeleccionados.FirstOrDefault(d => d.IdZonaDanio == idZona);
+        if (danio != null)
+        {
+            DaniosSeleccionados.Remove(danio);
+        }
     }
 }

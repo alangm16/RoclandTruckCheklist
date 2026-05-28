@@ -51,7 +51,7 @@
                     <Label.FormattedText>
                         <FormattedString>
                             <Span Text="{Binding ItemsOk}" FontSize="28" FontAttributes="Bold" TextColor="White"/>
-                            <Span Text="/6 revisados" FontSize="16" TextColor="#C8FFE0"/>
+                            <Span Text="/6 OK" FontSize="16" TextColor="#C8FFE0"/>
                         </FormattedString>
                     </Label.FormattedText>
                 </Label>
@@ -166,7 +166,7 @@
                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
                     <Button Grid.Column="0"
                             x:Name="BtnTodoOk"
-                            Text="⚡  Todo OK"
+                            Text="Todo OK"
                             BackgroundColor="#4CAF50"
                             TextColor="White"
                             FontAttributes="Bold"
@@ -250,8 +250,7 @@
                        BackgroundColor="White" CornerRadius="16"
                        Padding="16,14" BorderColor="#E8F0E8" HasShadow="False">
                     <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="14">
-                        <Border Grid.Column="0"
-                                BackgroundColor="#F0F8F0"
+                        <Border Grid.Column="0" BackgroundColor="#F0F8F0"
                                 StrokeShape="RoundRectangle 10"
                                 WidthRequest="44" HeightRequest="44">
                             <Image Source="id_card.png"
@@ -259,7 +258,7 @@
                                    HorizontalOptions="Center" VerticalOptions="Center"/>
                         </Border>
                         <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="2">
-                            <Label Text="Licencia vigente"
+                            <Label Text="Licencia del chofer"
                                    FontSize="15" FontAttributes="Bold"
                                    TextColor="#1B3A1B"/>
                             <Label x:Name="LblLicencia"
@@ -289,7 +288,7 @@
                     </Grid>
                 </Frame>
 
-                <!-- Sin daños nuevos -->
+                <!-- Daños nuevos -->
                 <Frame x:Name="ItemDanios"
                        BackgroundColor="White" CornerRadius="16"
                        Padding="16,14" BorderColor="#E8F0E8" HasShadow="False">
@@ -498,20 +497,20 @@
         <!--  BOTÓN FIJO DE ENVÍO                                   -->
         <!-- ══════════════════════════════════════════════════════ -->
         <Grid Grid.Row="2"
-              BackgroundColor="White"
-              Padding="20,14,20,28">
+          BackgroundColor="White"
+          Padding="20,14,20,28">
             <Button x:Name="BtnEnviar"
-                    Text="{Binding TextoBotonEnviar}"
-                    Command="{Binding EnviarCommand}"
-                    CornerRadius="16"
-                    HeightRequest="58"
-                    FontSize="17"
-                    FontAttributes="Bold"
-                    TextColor="White"
-                    IsEnabled="{Binding PuedeEnviar}">
+                Text="{Binding TextoBotonEnviar}"
+                Command="{Binding EnviarCommand}"
+                CornerRadius="16"
+                HeightRequest="58"
+                FontSize="17"
+                FontAttributes="Bold"
+                TextColor="White"
+                IsEnabled="{Binding PuedeEnviar}">
                 <Button.Background>
                     <LinearGradientBrush x:Name="BtnGradient"
-                                         StartPoint="0,0" EndPoint="1,0">
+                                     StartPoint="0,0" EndPoint="1,0">
                         <GradientStop x:Name="BtnStop1" Color="#1B8A3A" Offset="0.0"/>
                         <GradientStop x:Name="BtnStop2" Color="#4CAF50" Offset="1.0"/>
                     </LinearGradientBrush>
@@ -519,28 +518,44 @@
             </Button>
         </Grid>
 
-        <!-- ─── TOAST LOCAL (confirmación de envío) ────────────── -->
-        <Frame x:Name="ToastFrame"
-               CornerRadius="16"
-               Padding="18,14"
-               IsVisible="False"
-               HorizontalOptions="Center"
-               VerticalOptions="End"
-               Margin="24,0,24,100"
-               HasShadow="True"
-               Opacity="0"
-               ZIndex="99">
-            <HorizontalStackLayout Spacing="10" HorizontalOptions="Center">
-                <Image x:Name="ToastIcon"
-                       WidthRequest="22" HeightRequest="22"
-                       VerticalOptions="Center"/>
-                <Label x:Name="ToastLabel"
-                       TextColor="White"
-                       FontAttributes="Bold"
-                       FontSize="15"
-                       VerticalOptions="Center"/>
-            </HorizontalStackLayout>
-        </Frame>
+        <!-- ─── MODAL DE ÉXITO (overlay + frame centrado) ───────── -->
+        <!-- ─── MODAL DE ÉXITO (overlay centrado real) ───────── -->
+        <Grid x:Name="SuccessOverlay"
+      IsVisible="False"
+      BackgroundColor="#99000000"
+      ZIndex="100"
+      Grid.Row="0"
+      Grid.RowSpan="3">
+
+            <Frame BackgroundColor="White"
+           CornerRadius="24"
+           Padding="28,32"
+           WidthRequest="300"
+           HasShadow="True"
+           HorizontalOptions="Center"
+           VerticalOptions="Center">
+
+                <VerticalStackLayout Spacing="16"
+                             HorizontalOptions="Center">
+
+                    <!-- ICONO -->
+                    <Image x:Name="SuccessIcon"
+                   Source="check_green.png"
+                   WidthRequest="64"
+                   HeightRequest="64"
+                   HorizontalOptions="Center"/>
+
+                    <!-- MENSAJE -->
+                    <Label x:Name="SuccessLabel"
+                   FontSize="18"
+                   FontAttributes="Bold"
+                   TextColor="#1B5E20"
+                   HorizontalTextAlignment="Center"
+                   LineBreakMode="WordWrap"/>
+
+                </VerticalStackLayout>
+            </Frame>
+        </Grid>
 
     </Grid>
 </ContentPage>

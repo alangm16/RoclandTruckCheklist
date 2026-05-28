@@ -104,6 +104,18 @@ public class ChoferDto
     public bool Activo { get; set; }
 }
 
+public class ZonaDto
+{
+    [JsonPropertyName("id")]
+    public int Id { get; set; }
+
+    [JsonPropertyName("nombre")]
+    public string Nombre { get; set; } = string.Empty;
+
+    [JsonPropertyName("activo")]
+    public bool Activo { get; set; }
+}
+
 public class CatalogosMobileResponse
 {
     [JsonPropertyName("vehiculos")]
@@ -114,8 +126,10 @@ public class CatalogosMobileResponse
 
     [JsonPropertyName("choferes")]
     public List<ChoferDto> Choferes { get; set; } = new();
-}
 
+    [JsonPropertyName("zonasDanio")]
+    public List<ZonaDto> ZonasDanio { get; set; } = new();
+}
 // ──────────────────────────────────────────────────────────────
 //  CHECKLIST — REQUEST Y RESPONSE
 // ──────────────────────────────────────────────────────────────
@@ -161,6 +175,9 @@ public class CrearChecklistRequest
 
     [JsonPropertyName("observacion")]
     public string? Observacion { get; set; }
+
+    [JsonPropertyName("daniosReportados")]
+    public List<CrearChecklistDanioRequest> DaniosReportados { get; set; } = new();
 }
 
 /// <summary>
@@ -191,18 +208,28 @@ public class SesionGuardia
     public string RefreshToken { get; set; } = string.Empty;
     public DateTime TokenExpiracion { get; set; }
 
-    // Catálogos cargados al iniciar sesión — evita llamadas repetidas
     public List<VehiculoDto> Vehiculos { get; set; } = new();
     public List<SucursalDto> Sucursales { get; set; } = new();
     public List<ChoferDto> Choferes { get; set; } = new();
 
-    // Conveniencia: CEDIS resuelto de la lista de sucursales
+    // NUEVO: Caché local de las zonas de daño
+    public List<ZonaDto> ZonasDanio { get; set; } = new();
+
     public SucursalDto? SucursalCedis =>
         Sucursales.FirstOrDefault(s =>
-            s.Nombre.Equals("CEDIS", StringComparison.OrdinalIgnoreCase));
+            s.Nombre.Equals("A11-CEDIS BRAVO", StringComparison.OrdinalIgnoreCase));
 
     public bool TokenVigente =>
-        DateTime.UtcNow < TokenExpiracion.AddMinutes(-2); // margen de 2 min
+        DateTime.UtcNow < TokenExpiracion.AddMinutes(-2);
+}
+
+public class CrearChecklistDanioRequest
+{
+    [JsonPropertyName("idZonaDanio")]
+    public int IdZonaDanio { get; set; }
+
+    [JsonPropertyName("notas")]
+    public string? Notas { get; set; }
 }
 
 // ──────────────────────────────────────────────────────────────

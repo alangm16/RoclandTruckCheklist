@@ -23,16 +23,26 @@ namespace RoclandTruckCheck.Mobile
                     fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
                 });
 
+            // Servicios de estado → Singleton (sin cambio)
             builder.Services.AddSingleton<ApiService>();
             builder.Services.AddSingleton<AuthStateService>();
             builder.Services.AddSingleton<SesionGuardia>();
 
+            // ViewModels:
+            // - LoginViewModel: Transient está bien (se usa poco)
+            // - TipoAccesoViewModel: Singleton → se reutiliza en cada vuelta sin reconstruir
+            // - ChecklistViewModel: Singleton → el más pesado; InicializarConTipo() lo resetea
+            //   correctamente antes de cada uso, así que es seguro reutilizarlo
             builder.Services.AddTransient<LoginViewModel>();
-            builder.Services.AddTransient<TipoAccesoViewModel>();
-            builder.Services.AddTransient<ChecklistViewModel>();
+            builder.Services.AddSingleton<TipoAccesoViewModel>();
+            builder.Services.AddSingleton<ChecklistViewModel>();
 
+            // Views:
+            // - LoginPage: Transient está bien
+            // - TipoAcceso: Singleton → evita reconstruir el árbol visual cada vez
+            // - ChecklistPage: Transient necesario porque QueryProperty llega en cada navegación
             builder.Services.AddTransient<LoginPage>();
-            builder.Services.AddTransient<TipoAcceso>();
+            builder.Services.AddSingleton<TipoAcceso>();
             builder.Services.AddTransient<ChecklistPage>();
 
 #if DEBUG
@@ -41,6 +51,5 @@ namespace RoclandTruckCheck.Mobile
 
             return builder.Build();
         }
-        
     }
 }

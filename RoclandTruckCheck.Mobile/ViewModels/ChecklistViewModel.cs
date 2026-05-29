@@ -90,24 +90,20 @@ public partial class ChecklistViewModel : ObservableObject
 
     public void InicializarConTipo(TipoRegistro tipo)
     {
+        ResetearEstadoCompleto();               
         TipoRegistro = tipo;
         _tipoRegistro = tipo;
-
         TituloTipo = tipo.ToString().ToUpper();
-        TextoBotonEnviar = tipo == TipoRegistro.Entrada
-            ? "Enviar entrada"
-            : "Enviar salida";
+        TextoBotonEnviar = tipo == TipoRegistro.Entrada ? "Enviar entrada" : "Enviar salida";
 
-        CargarCatalogosDesdeCache();
+        CargarCatalogosDesdeCache();            // Colecciones frescas (rápido, desde cache)
 
-        // REQUERIMIENTO: Seleccionar CEDIS por defecto si es Entrada
         if (tipo == TipoRegistro.Entrada)
         {
             SucursalSeleccionada = Sucursales.FirstOrDefault(s =>
                 s.Nombre.Contains("CEDIS BRAVO", StringComparison.OrdinalIgnoreCase));
         }
 
-        PuedeEnviar = false;
         ActualizarPuedeEnviar();
     }
 
@@ -281,5 +277,34 @@ public partial class ChecklistViewModel : ObservableObject
     {
         var danio = DaniosSeleccionados.FirstOrDefault(d => d.IdZonaDanio == idZona);
         if (danio != null) DaniosSeleccionados.Remove(danio);
+    }
+
+    private void ResetearEstadoCompleto()
+    {
+        SucursalSeleccionada = null;
+        VehiculoSeleccionado = null;
+        ChoferSeleccionado = null;
+        Observacion = null;
+        DaniosSeleccionados.Clear();
+        PanelDaniosVisible = false;
+        _candados = null;
+        _licencia = null;
+        _danios = null;
+        _llantas = null;
+        _luces = null;
+        _fugas = null;
+        ItemsOk = 0;
+        ProgresoChecklist = 0;
+        PuedeEnviar = false;
+
+        // Notificar a la UI
+        OnPropertyChanged(nameof(SucursalSeleccionada));
+        OnPropertyChanged(nameof(VehiculoSeleccionado));
+        OnPropertyChanged(nameof(ChoferSeleccionado));
+        OnPropertyChanged(nameof(Observacion));
+        OnPropertyChanged(nameof(PanelDaniosVisible));
+        OnPropertyChanged(nameof(ItemsOk));
+        OnPropertyChanged(nameof(ProgresoChecklist));
+        OnPropertyChanged(nameof(PuedeEnviar));
     }
 }

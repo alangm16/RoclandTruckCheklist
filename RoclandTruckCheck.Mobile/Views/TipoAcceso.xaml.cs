@@ -7,6 +7,9 @@ public partial class TipoAcceso : ContentPage
 {
     private readonly TipoAccesoViewModel _vm;
 
+    // Evita doble-tap mientras se navega
+    private bool _navegando = false;
+
     public TipoAcceso(TipoAccesoViewModel vm)
     {
         InitializeComponent();
@@ -15,35 +18,49 @@ public partial class TipoAcceso : ContentPage
     }
 
     // ─────────────────────────────────────────────────────────────────
-    // CARDS — animación de rebote + navegación
+    // CARDS — animación EN PARALELO con la navegación (no bloqueante)
     // ─────────────────────────────────────────────────────────────────
 
     private async void OnEntradaTapped(object? sender, TappedEventArgs e)
     {
-        await AnimarCard(CardEntrada);
-        await Shell.Current.GoToAsync(nameof(ChecklistPage),
+        if (_navegando) return;
+        _navegando = true;
+
+        // Lanzamos animación y navegación al mismo tiempo.
+        // El usuario ve respuesta visual instantánea; la navegación
+        // ya está en marcha mientras la animación se completa (≈220 ms).
+        var animTask = AnimarCard(CardEntrada);
+        var navTask = Shell.Current.GoToAsync(nameof(ChecklistPage),
             new Dictionary<string, object>
             {
                 ["TipoRegistro"] = TipoRegistro.Entrada
             });
+
+        await Task.WhenAll(animTask, navTask);
+        _navegando = false;
     }
 
     private async void OnSalidaTapped(object? sender, TappedEventArgs e)
     {
-        await AnimarCard(CardSalida);
-        await Shell.Current.GoToAsync(nameof(ChecklistPage),
+        if (_navegando) return;
+        _navegando = true;
+
+        var animTask = AnimarCard(CardSalida);
+        var navTask = Shell.Current.GoToAsync(nameof(ChecklistPage),
             new Dictionary<string, object>
             {
                 ["TipoRegistro"] = TipoRegistro.Salida
             });
+
+        await Task.WhenAll(animTask, navTask);
+        _navegando = false;
     }
 
+    // Rebote rápido: duración total ≈ 220 ms (antes 240 ms con 3 awaits seriales)
     private static async Task AnimarCard(View card)
     {
-        // Pequeño rebote: escala baja → sube → normal
-        await card.ScaleTo(0.96, 80, Easing.CubicIn);
-        await card.ScaleTo(1.02, 80, Easing.CubicOut);
-        await card.ScaleTo(1.00, 60, Easing.CubicIn);
+        await card.ScaleTo(0.96, 70, Easing.CubicIn);
+        await card.ScaleTo(1.00, 80, Easing.SpringOut);
     }
 
     // ─────────────────────────────────────────────────────────────────
@@ -63,7 +80,7 @@ public partial class TipoAcceso : ContentPage
     }
 
     // ─────────────────────────────────────────────────────────────────
-    // TOAST (llamado desde ChecklistPage via MessagingCenter / Shell)
+    // TOAST
     // ─────────────────────────────────────────────────────────────────
 
     public async Task MostrarToastExitoAsync(string mensaje)
@@ -81,7 +98,7 @@ public partial class TipoAcceso : ContentPage
     }
 
     // ─────────────────────────────────────────────────────────────────
-    // CICLO DE VIDA — refrescar contador al volver
+    // CICLO DE VIDA
     // ─────────────────────────────────────────────────────────────────
 
     protected override void OnAppearing()

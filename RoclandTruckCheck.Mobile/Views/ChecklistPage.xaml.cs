@@ -11,13 +11,18 @@ public partial class ChecklistPage : ContentPage
 
     private bool? _candados, _licencia, _danios, _llantas, _luces, _fugas;
 
-    // ── Controla si el WebView ya terminó de cargar ────────────────
+    // El WebView se carga la primera vez que el panel de daños se hace visible.
+    // Se usa una TaskCompletionSource para saber cuándo terminó sin bloquear.
     private bool _webViewReady = false;
+    private TaskCompletionSource<bool>? _webViewLoadTcs;
 
     public TipoRegistro TipoRegistro
     {
         set
         {
+            // InicializarConTipo es barato (solo asigna propiedades del VM),
+            // pero lo dejamos en el setter para que el dato llegue antes de
+            // que OnAppearing comience a suscribirse.
             _vm.InicializarConTipo(value);
             AplicarTema(value);
         }
@@ -35,9 +40,8 @@ public partial class ChecklistPage : ContentPage
             if (e.PropertyName == nameof(ChecklistViewModel.PuedeEnviar))
                 ActualizarColorBoton();
 
-            // ELIMINA O COMENTA ESTAS LÍNEAS:
-            // if (e.PropertyName == nameof(ChecklistViewModel.PanelDaniosVisible))
-            //     InicializarWebViewSiNecesario(); 
+            if (e.PropertyName == nameof(ChecklistViewModel.PanelDaniosVisible))
+                InicializarWebViewSiNecesario();
         };
     }
 
@@ -46,74 +50,79 @@ public partial class ChecklistPage : ContentPage
         base.OnAppearing();
         _vm.OnTodoOk += HandleTodoOk;
         _vm.OnLimpiar += HandleLimpiar;
+        _vm.OnRegistroEnviado += OnRegistroEnviadoHandler;    
+        _vm.PropertyChanged += OnVmPropertyChanged;           
         TruckWebView.Navigated += OnTruckWebViewNavigated;
-
-        // NUEVO: PRECARGA SILENCIOSA
-        if (!_webViewReady && TruckWebView.Source == null)
-        {
-            TruckWebView.Source = new HtmlWebViewSource
-            {
-                Html = LoadEmbeddedHtml()
-            };
-        }
     }
 
     // ══════════════════════════════════════════════════════════════════
-    //  TRUCK WEBVIEW — región completa
+    //  TRUCK WEBVIEW
     // ══════════════════════════════════════════════════════════════════
 
     /// <summary>
-    /// Carga el HTML local la primera vez que el panel se hace visible.
-    /// Las veces siguientes ya está cargado; solo limpia si el usuario
-    /// tocó "Limpiar" (ver HandleLimpiar).
+    /// Solo carga el HTML cuando el panel de daños realmente se muestra.
+    /// Evita cargar un WebView pesado al abrir la página.
     /// </summary>
     private void InicializarWebViewSiNecesario()
     {
         if (!_vm.PanelDaniosVisible) return;
         if (_webViewReady) return;
 
-        // MauiAsset embebido → accesible mediante el esquema local
-        TruckWebView.Source = new HtmlWebViewSource
-        {
-            Html = LoadEmbeddedHtml()
-        };
+        // Carga asíncrona real: no bloquea el hilo principal
+        _ = CargarWebViewAsync();
     }
 
     /// <summary>
-    /// Lee truck_damage.html desde Resources/Raw (MauiAsset).
+    /// Lee truck_damage.html de forma asíncrona y asigna al WebView
+    /// sin bloquear el hilo de UI.
     /// </summary>
-    private static string LoadEmbeddedHtml()
+    private async Task CargarWebViewAsync()
     {
-        using var stream = FileSystem.OpenAppPackageFileAsync("truck_damage.html").Result;
-        using var reader = new StreamReader(stream);
-        return reader.ReadToEnd();
+        try
+        {
+            _webViewLoadTcs = new TaskCompletionSource<bool>();
+
+            // Apertura asíncrona → no usa .Result
+            using var stream = await FileSystem.OpenAppPackageFileAsync("truck_damage.html");
+            using var reader = new StreamReader(stream);
+            var html = await reader.ReadToEndAsync();
+
+            // Asignamos en el hilo principal
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                TruckWebView.Source = new HtmlWebViewSource { Html = html };
+            });
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[WebView] Error cargando HTML: {ex.Message}");
+        }
     }
 
-    /// <summary>
-    /// El WebView intercepta navegaciones con el esquema "truckdamage://"
-    /// que el HTML emite cada vez que el usuario agrega, cambia o borra un daño.
-    /// </summary>
     private void OnTruckWebViewNavigating(object? sender, WebNavigatingEventArgs e)
     {
         if (!e.Url.StartsWith("truckdamage://")) return;
 
-        e.Cancel = true;   // evitamos navegación real
+        e.Cancel = true;
 
-        // Extraemos el parámetro ?data=...
         var uri = new Uri(e.Url);
         var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
         var data = query["data"];
         if (string.IsNullOrEmpty(data)) return;
 
-        // Deserializamos el array de daños que envía el HTML
         var danios = DeserializarDanios(data);
         _vm.ActualizarDaniosDesdeWebView(danios);
     }
 
-    /// <summary>
-    /// Cuando el ViewModel cambia porque el panel se ocultó (el guardia
-    /// marcó "Sin daños" como OK), limpiamos el WebView también.
-    /// </summary>
+    private void OnTruckWebViewNavigated(object? sender, WebNavigatedEventArgs e)
+    {
+        if (e.Result == WebNavigationResult.Success)
+        {
+            _webViewReady = true;
+            _webViewLoadTcs?.TrySetResult(true);
+        }
+    }
+
     private async Task LimpiarWebViewAsync()
     {
         if (!_webViewReady) return;
@@ -121,13 +130,9 @@ public partial class ChecklistPage : ContentPage
         {
             await TruckWebView.EvaluateJavaScriptAsync("limpiarTodo()");
         }
-        catch { /* WebView puede estar en proceso de carga */ }
+        catch { }
     }
 
-    /// <summary>
-    /// Permite pre-cargar daños en el WebView (útil si en el futuro
-    /// abres la página en modo edición con datos previos).
-    /// </summary>
     public async Task CargarDaniosPreviosAsync(List<CrearChecklistDanioRequest> danios)
     {
         if (!_webViewReady) return;
@@ -136,19 +141,11 @@ public partial class ChecklistPage : ContentPage
         await TruckWebView.EvaluateJavaScriptAsync($"window.setDamagesJson('{escaped}')");
     }
 
-    // ── Helpers ───────────────────────────────────────────────────
-
     private static List<CrearChecklistDanioRequest> DeserializarDanios(string json)
     {
         try
         {
-            // Agrega estas opciones:
-            var options = new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            };
-
-            // Pásale las opciones al deserializador:
+            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
             return JsonSerializer.Deserialize<List<CrearChecklistDanioRequest>>(json, options)
                    ?? new List<CrearChecklistDanioRequest>();
         }
@@ -156,7 +153,7 @@ public partial class ChecklistPage : ContentPage
     }
 
     // ══════════════════════════════════════════════════════════════════
-    //  MÉTODOS EXISTENTES — sin cambios salvo los marcados con ★
+    //  TEMA Y COLOR DE BOTÓN
     // ══════════════════════════════════════════════════════════════════
 
     private void AplicarTema(TipoRegistro tipo)
@@ -168,6 +165,25 @@ public partial class ChecklistPage : ContentPage
         BtnStop2.Color = esEntrada ? Color.FromArgb("#4CAF50") : Color.FromArgb("#F06000");
         ActualizarColorBoton();
     }
+
+    private void ActualizarColorBoton()
+    {
+        if (!_vm.PuedeEnviar)
+        {
+            BtnStop1.Color = Colors.Gray;
+            BtnStop2.Color = Color.FromArgb("#BDBDBD");
+        }
+        else
+        {
+            bool esEntrada = _vm.TipoRegistro == TipoRegistro.Entrada;
+            BtnStop1.Color = Color.FromArgb(esEntrada ? "#1B8A3A" : "#B84A00");
+            BtnStop2.Color = Color.FromArgb(esEntrada ? "#4CAF50" : "#F06000");
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    //  ITEMS DEL CHECKLIST
+    // ══════════════════════════════════════════════════════════════════
 
     private void OnCandadosOkTapped(object? s, TappedEventArgs e) => MarcarItem(ref _candados, true, IcoCandadosOk, IcoCandadosFalla, LblCandados, ItemCandados);
     private void OnCandadosFallaTapped(object? s, TappedEventArgs e) => MarcarItem(ref _candados, false, IcoCandadosOk, IcoCandadosFalla, LblCandados, ItemCandados);
@@ -235,35 +251,9 @@ public partial class ChecklistPage : ContentPage
         _vm.EvaluarEstadoDanios(_danios);
     }
 
-    private void ActualizarColorBoton()
-    {
-        if (!_vm.PuedeEnviar)
-        {
-            BtnStop1.Color = Colors.Gray;
-            BtnStop2.Color = Color.FromArgb("#BDBDBD");
-        }
-        else
-        {
-            bool esEntrada = _vm.TipoRegistro == TipoRegistro.Entrada;
-            BtnStop1.Color = Color.FromArgb(esEntrada ? "#1B8A3A" : "#B84A00");
-            BtnStop2.Color = Color.FromArgb(esEntrada ? "#4CAF50" : "#F06000");
-        }
-    }
-
-    protected override void OnDisappearing()
-    {
-        base.OnDisappearing();
-        _vm.OnTodoOk -= HandleTodoOk;
-        _vm.OnLimpiar -= HandleLimpiar;
-        TruckWebView.Navigated -= OnTruckWebViewNavigated;
-    }
-
-    // ★ Callback cuando el WebView termina de cargar el HTML
-    private void OnTruckWebViewNavigated(object? sender, WebNavigatedEventArgs e)
-    {
-        if (e.Result == WebNavigationResult.Success)
-            _webViewReady = true;
-    }
+    // ══════════════════════════════════════════════════════════════════
+    //  HANDLERS DE EVENTOS DEL VIEWMODEL
+    // ══════════════════════════════════════════════════════════════════
 
     private void HandleTodoOk()
     {
@@ -288,9 +278,8 @@ public partial class ChecklistPage : ContentPage
         ResetearBotones(IcoLucesOk, IcoLucesFalla, LblLuces, ItemLuces);
         ResetearBotones(IcoFugasOk, IcoFugasFalla, LblFugas, ItemFugas);
 
-        // ★ También limpia el camión dibujado
         _ = LimpiarWebViewAsync();
-        _webViewReady = false;   // fuerza recarga limpia si vuelve a abrirse
+        _webViewReady = false;
 
         SincronizarConViewModel();
         ActualizarColorBoton();
@@ -314,6 +303,20 @@ public partial class ChecklistPage : ContentPage
         SuccessOverlay.IsVisible = false;
     }
 
+    // ══════════════════════════════════════════════════════════════════
+    //  NAVEGACIÓN
+    // ══════════════════════════════════════════════════════════════════
+
+    protected override void OnDisappearing()
+    {
+        base.OnDisappearing();
+        _vm.OnTodoOk -= HandleTodoOk;
+        _vm.OnLimpiar -= HandleLimpiar;
+        _vm.OnRegistroEnviado -= OnRegistroEnviadoHandler;    
+        _vm.PropertyChanged -= OnVmPropertyChanged;           
+        TruckWebView.Navigated -= OnTruckWebViewNavigated;
+    }
+
     private async void OnVolverClicked(object? sender, EventArgs e)
         => await Shell.Current.GoToAsync("..");
 
@@ -321,5 +324,14 @@ public partial class ChecklistPage : ContentPage
     {
         _ = Shell.Current.GoToAsync("..");
         return true;
+    }
+
+    private void OnVmPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(ChecklistViewModel.PuedeEnviar))
+            ActualizarColorBoton();
+
+        if (e.PropertyName == nameof(ChecklistViewModel.PanelDaniosVisible))
+            InicializarWebViewSiNecesario();
     }
 }

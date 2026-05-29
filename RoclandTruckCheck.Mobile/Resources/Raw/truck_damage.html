@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%; background: #F5F5F3;
+    font-family: -apple-system, 'Helvetica Neue', sans-serif;
+    overflow: hidden; user-select: none;
+  }
+
+  /* ── TOP BAR ── */
+  .top-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 12px 6px;
+  }
+  .top-left { display: flex; align-items: center; gap: 6px; }
+  .top-title { font-size: 13px; font-weight: 700; color: #1B3A1B; }
+  .top-badge {
+    background: #E24B4A; color: #fff; font-size: 10px; font-weight: 700;
+    padding: 2px 7px; border-radius: 10px; display: none;
+  }
+  .btn-limpiar {
+    background: none; border: 1px solid #D8D8D4; border-radius: 8px;
+    padding: 5px 11px; font-size: 11px; color: #888; cursor: pointer;
+    display: flex; align-items: center; gap: 4px;
+  }
+  .btn-limpiar:active { background: #EDEDEB; }
+
+  /* ── TABS ── */
+  .tabs {
+    display: flex; background: #E8E8E5;
+    border-radius: 11px; margin: 0 10px 6px; padding: 3px; gap: 2px;
+  }
+  .tab {
+    flex: 1; text-align: center; font-size: 11px; font-weight: 600;
+    padding: 7px 2px; border-radius: 8px; border: none;
+    background: transparent; color: #888; cursor: pointer;
+    transition: all 0.15s; position: relative;
+  }
+  .tab.active { background: #fff; color: #1B3A1B; box-shadow: 0 1px 3px rgba(0,0,0,0.10); }
+  .tab-dot {
+    position: absolute; top: 3px; right: 4px;
+    width: 6px; height: 6px; border-radius: 50%;
+    background: #E24B4A; display: none;
+  }
+  .tab-dot.on { display: block; }
+
+  /* ── SVG CANVAS ── */
+  .canvas-wrap {
+    margin: 0 10px;
+    background: #fff; border-radius: 14px;
+    border: 1px solid #E4E4E0;
+    overflow: hidden;
+    /* altura dinámica: llena el espacio disponible menos top-bar + tabs + list */
+    height: calc(100vh - 196px);
+    min-height: 200px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .truck-svg { width: 100%; height: 100%; display: block; }
+
+  /* ── HINT ── */
+  .hint {
+    text-align: center; font-size: 10px; color: #B0B0AA;
+    margin: 4px 10px 0; line-height: 1.4;
+  }
+
+  /* ── DAMAGE LIST ── */
+  .list-wrap {
+    margin: 6px 10px 0;
+    max-height: 80px; overflow-y: auto;
+    display: flex; flex-wrap: wrap; gap: 5px;
+  }
+  .damage-chip {
+    display: flex; align-items: center; gap: 5px;
+    background: #FFECEC; border: 1px solid #FFCCCC;
+    border-radius: 20px; padding: 4px 10px 4px 8px;
+    font-size: 11px; font-weight: 600; color: #A32D2D; cursor: default;
+  }
+  .damage-chip-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: #E24B4A; flex-shrink: 0;
+  }
+  .rm-btn {
+    background: none; border: none; cursor: pointer;
+    color: #E24B4A; font-size: 14px; line-height: 1;
+    padding: 0; margin-left: 2px; opacity: 0.7;
+  }
+  .rm-btn:active { opacity: 1; }
+  .empty { color: #CCC; font-size: 11px; padding: 4px 2px; }
+
+  /* ── CONFIRM TOAST ── */
+  .toast {
+    position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%);
+    background: #1B3A1B; color: #fff; font-size: 12px; font-weight: 600;
+    padding: 8px 18px; border-radius: 20px; z-index: 500;
+    opacity: 0; transition: opacity 0.2s; pointer-events: none;
+    white-space: nowrap;
+  }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <div class="top-left">
+    <span class="top-title">Marcar daños</span>
+    <span class="top-badge" id="top-badge">0</span>
+  </div>
+  <button class="btn-limpiar" onclick="limpiarTodo()">↺ Limpiar todo</button>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="setView('lado_Copiloto')">Copiloto<span class="tab-dot" id="dot-lado_Copiloto"></span></button>
+  <button class="tab" onclick="setView('lado_Chofer')">Chofer<span class="tab-dot" id="dot-lado_Chofer"></span></button>
+  <button class="tab" onclick="setView('frente')">Frente<span class="tab-dot" id="dot-frente"></span></button>
+  <button class="tab" onclick="setView('atras')">Atrás<span class="tab-dot" id="dot-atras"></span></button>
+  <button class="tab" onclick="setView('techo')">Techo<span class="tab-dot" id="dot-techo"></span></button>
+</div>
+
+<div class="canvas-wrap">
+  <svg class="truck-svg" id="truck-svg"
+       viewBox="0 0 480 220"
+       xmlns="http://www.w3.org/2000/svg"
+       style="touch-action:manipulation"></svg>
+</div>
+
+<p class="hint">Toca una zona del camión para registrar un daño · Toca el pin para quitarlo</p>
+<div class="list-wrap" id="list-wrap"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ═══════════════════════════════════════════════════════
+   IDs según INSERT en TBL_ROCLAND_TRUCK_ZONAS_DANIO:
+   1  Frente Cabina
+   2  Cristal Parabrisas
+   3  Lado Izquierdo Cabina   ← Lado Copiloto   (MX: volante derecho)
+   4  Lado Derecho Cabina     ← Lado Chofer
+   5  Lado Izquierdo Caja     ← Lado Copiloto
+   6  Lado Derecho Caja       ← Lado Chofer
+   7  Parte Trasera / Puertas
+   8  Techo
+   9  Llantas / Ejes
+═══════════════════════════════════════════════════════ */
+
+/* ── Colores ── */
+const C = {
+  cuerpo:  '#E8E4D8', stroke: '#3A3A4A',
+  panel:   '#D4CFBF', vidrio: '#9EC5D8',
+  puerta:  '#DDD9C8', rueda:  '#2C2C2A',
+  ruedaIn: '#5F5E5A', faro:   '#EF9F27',
+  faroR:   '#E24B4A', piso:   '#CCCCCC',
+  zona:    'rgba(230,75,74,0.13)',  zonaSt: '#E24B4A',
+  pin:     '#E24B4A', pinGlow:'rgba(226,75,74,0.20)',
+  pinTxt:  '#fff',
+  labelBg: 'rgba(255,255,255,0.92)', labelTxt: '#3A3A4A',
+};
+
+/* ═══════════════════ VIEWS ═══════════════════════════ */
+const VIEWS = {
+
+/* ─────────────────────────────────────────────────────
+   LADO Copiloto
+   En México el conductor va a la DERECHA del vehículo.
+   Vista lateral: la cabina aparece a la DERECHA del dibujo.
+   Copiloto = Lado IZQUIERDO de la caja / cabina (id 3, 5).
+   El camión mira hacia la izquierda en esta vista.
+───────────────────────────────────────────────────── */
+lado_Copiloto: { zones: [
+  { id:5, name:'Lado Izq. Caja',    hitX:22, hitY:45, hitW:288,hitH:122, px:160, py:106,
+    label:'Caja (lado Copiloto)', lx:160, ly:88 },
+  { id:3, name:'Lado Izq. Cabina',  hitX:312,hitY:52, hitW:138,hitH:116, px:381, py:120,
+    label:'Cabina (lado Copiloto)', lx:381, ly:100 },
+  { id:9, name:'Llantas / Ejes',    hitX:48, hitY:156,hitW:360,hitH:50,  px:240, py:184,
+    label:'Llantas', lx:240, ly:172 },
+],
+svg: `
+  <!-- Caja principal -->
+  <rect x="22" y="45" width="288" height="122" rx="6" fill="${C.cuerpo}" stroke="${C.stroke}" stroke-width="2.2"/>
+  <line x1="118" y1="45" x2="118" y2="167" stroke="${C.stroke}" stroke-width="1.3" stroke-dasharray="0"/>
+  <line x1="210" y1="45" x2="210" y2="167" stroke="${C.stroke}" stroke-width="1.3"/>
+  <!-- Refuerzo inferior caja -->
+  <rect x="22" y="155" width="288" height="12" rx="0" fill="${C.panel}" stroke="${C.stroke}" stroke-width="1"/>
+  <!-- Cabina -->
+  <rect x="312" y="52" width="138" height="116" rx="9" fill="${C.cuerpo}" stroke="${C.stroke}" stroke-width="2.2"/>
+  <!-- Franja techo cabina -->
+  <rect x="312" y="52" width="138" height="38" rx="9" fill="${C.panel}" stroke="${C.stroke}" stroke-width="1.2"/>
+  <!-- Parabrisas -->
+  <rect x="368" y="58" width="72" height="50" rx="5" fill="${C.vidrio}" stroke="${C.stroke}" stroke-width="1.4"/>
+  <!-- Marco parabrisas interior -->
+  <rect x="372" y="62" width="64" height="42" rx="3" fill="none" stroke="#7AAABB" stroke-width="0.8"/>
+  <!-- Puerta cabina -->
+  <rect x="316" y="98" width="90" height="60" rx="4" fill="${C.puerta}" stroke="${C.stroke}" stroke-width="1"/>
+  <!-- Ventana puerta -->
+  <rect x="320" y="102" width="55" height="28" rx="3" fill="${C.vidrio}" stroke="${C.stroke}" stroke-width="0.9" opacity="0.7"/>
+  <!-- Manija -->
+  <rect x="396" y="130" width="16" height="5" rx="2.5" fill="#888" stroke="#666" stroke-width="0.5"/>
+  <!-- Estribo -->
+  <rect x="316" y="157" width="90" height="8" rx="2" fill="#B8B4A0" stroke="${C.stroke}" stroke-width="0.8"/>
+  <!-- Faro trasero cabina -->
+  <rect x="314" y="145" width="20" height="12" rx="3" fill="${C.faro}" stroke="${C.stroke}" stroke-width="1"/>
+  <!-- Faro delantero (frente camión, izquierda del SVG en vista Copiloto) -->
+  <rect x="22" y="45" width="0" height="0"/>
+  <!-- Rueda delantera (cabina) -->
+  <ellipse cx="395" cy="186" rx="25" ry="25" fill="${C.rueda}" stroke="${C.stroke}" stroke-width="2"/>
+  <ellipse cx="395" cy="186" rx="14" ry="14" fill="${C.ruedaIn}"/>
+  <line x1="395" y1="172" x2="395" y2="200" stroke="#444" stroke-width="1.5"/>
+  <line x1="381" y1="186" x2="409" y2="186" stroke="#444" stroke-width="1.5"/>
+  <!-- Rueda trasera doble caja -->
+  <ellipse cx="220" cy="186" rx="27" ry="27" fill="${C.rueda}" stroke="${C.stroke}" stroke-width="2"/>
+  <ellipse cx="220" cy="186" rx="15" ry="15" fill="${C.ruedaIn}"/>
+  <ellipse cx="80"  cy="186" rx="27" ry="27" fill="${C.rueda}" stroke="${C.stroke}" stroke-width="2"/>
+  <ellipse cx="80"  cy="186" rx="15" ry="15" fill="${C.ruedaIn}"/>
+  <!-- Piso -->
+  <line x1="0" y1="211" x2="480" y2="211" stroke="${C.piso}" stroke-width="1.2" stroke-dasharray="7,5"/>
+`},
+
+/* ─────────────────────────────────────────────────────
+   LADO Chofer
+   El Chofer va a la IZQUIERDA del conductor.
+   Desde afuera: el Chofer está al lado DERECHO del vehículo.
+   Esta es la vista opuesta: cabina a la IZQUIERDA del dibujo.
+───────────────────────────────────────────────────── */
+lado_Chofer: { zones: [
+  { id:4, name:'Lado Der. Cabina',  hitX:22, hitY:52, hitW:138,hitH:116, px:91,  py:120,
+    label:'Cabina (Chofer)', lx:91, ly:100 },
+  { id:6, name:'Lado Der. Caja',    hitX:162,hitY:45, hitW:288,hitH:122, px:306, py:106,
+    label:'Caja (Chofer)', lx:306, ly:88 },
+  { id:9, name:'Llantas / Ejes',    hitX:48, hitY:156,hitW:360,hitH:50,  px:240, py:184,
+    label:'Llantas', lx:240, ly:172 },
+],
+svg: `
+  <!-- Cabina izquierda en esta vista (lado Chofer) -->
+  <rect x="22" y="52" width="138" height="116" rx="9" fill="${C.cuerpo}" stroke="${C.stroke}" stroke-width="2.2"/>
+  <rect x="22" y="52" width="138" height="38" rx="9" fill="${C.panel}" stroke="${C.stroke}" stroke-width="1.2"/>
+  <!-- Parabrisas Chofer -->
+  <rect x="22" y="58" width="72" height="50" rx="5" fill="${C.vidrio}" stroke="${C.stroke}" stroke-width="1.4"/>
+  <rect x="26" y="62" width="64" height="42" rx="3" fill="none" stroke="#7AAABB" stroke-width="0.8"/>
+  <!-- Puerta Chofer -->
+  <rect x="62" y="98" width="92" height="60" rx="4" fill="${C.puerta}" stroke="${C.stroke}" stroke-width="1"/>
+  <rect x="66" y="102" width="55" height="28" rx="3" fill="${C.vidrio}" stroke="${C.stroke}" stroke-width="0.9" opacity="0.7"/>
+  <rect x="62" y="130" width="16" height="5" rx="2.5" fill="#888" stroke="#666" stroke-width="0.5"/>
+  <rect x="62" y="157" width="92" height="8" rx="2" fill="#B8B4A0" stroke="${C.stroke}" stroke-width="0.8"/>
+  <rect x="130" y="145" width="20" height="12" rx="3" fill="${C.faro}" stroke="${C.stroke}" stroke-width="1"/>
+  <!-- Caja derecha en esta vista -->
+  <rect x="162" y="45" width="288" height="122" rx="6" fill="${C.cuerpo}" stroke="${C.stroke}" stroke-width="2.2"/>
+  <line x1="258" y1="45" x2="258" y2="167" stroke="${C.stroke}" stroke-width="1.3"/>
+  <line x1="350" y1="45" x2="350" y2="167" stroke="${C.stroke}" stroke-width="1.3"/>
+  <rect x="162" y="155" width="288" height="12" rx="0" fill="${C.panel}" stroke="${C.stroke}" stroke-width="1"/>
+  <!-- Ruedas -->
+  <ellipse cx="82"  cy="186" rx="25" ry="25" fill="${C.rueda}" stroke="${C.stroke}" stroke-width="2"/>
+  <ellipse cx="82"  cy="186" rx="14" ry="14" fill="${C.ruedaIn}"/>
+  <line x1="82" y1="172" x2="82" y2="200" stroke="#444" stroke-width="1.5"/>
+  <line x1="68" y1="186" x2="96" y2="186" stroke="#444" stroke-width="1.5"/>
+  <ellipse cx="258" cy="186" rx="27" ry="27" fill="${C.rueda}" stroke="${C.stroke}" stroke-width="2"/>
+  <ellipse cx="258" cy="186" rx="15" ry="15" fill="${C.ruedaIn}"/>
+  <ellipse cx="396" cy="186" rx="27" ry="27" fill="${C.rueda}" stroke="${C.stroke}" stroke-width="2"/>
+  <ellipse cx="396" cy="186" rx="15" ry="15" fill="${C.ruedaIn}"/>
+  <line x1="0" y1="211" x2="480" y2="211" stroke="${C.piso}" stroke-width="1.2" stroke-dasharray="7,5"/>
+`},
+
+/* ─── FRENTE ─── */
+frente: { zones: [
+  { id:1, name:'Frente Cabina',      hitX:118,hitY:38, hitW:246,hitH:145, px:240, py:160,
+    label:'Frente cabina', lx:240, ly:148 },
+  { id:2, name:'Cristal Parabrisas', hitX:138,hitY:48, hitW:204,hitH:82,  px:240, py:88,
+    label:'Parabrisas', lx:240, ly:76 },
+  { id:9, name:'Llantas / Ejes',     hitX:118,hitY:192,hitW:246,hitH:22,  px:240, py:205,
+    label:'Llantas', lx:240, ly:205 },
+],
+svg: `
+  <!-- Carrocería frente -->
+  <rect x="118" y="38" width="246" height="155" rx="14" fill="${C.cuerpo}" stroke="${C.stroke}" stroke-width="2.2"/>
+  <!-- Parabrisas -->
+  <rect x="138" y="48" width="204" height="82" rx="8" fill="${C.vidrio}" stroke="${C.stroke}" stroke-width="1.5"/>
+  <rect x="143" y="53" width="194" height="72" rx="5" fill="none" stroke="#7AAABB" stroke-width="0.9"/>
+  <!-- Espejos retrovisores -->
+  <rect x="82"  y="100" width="36" height="52" rx="5" fill="${C.panel}" stroke="${C.stroke}" stroke-width="1.4"/>
+  <rect x="364" y="100" width="36" height="52" rx="5" fill="${C.panel}" stroke="${C.stroke}" stroke-width="1.4"/>
+  <!-- Parrilla -->
+  <rect x="138" y="140" width="204" height="42" rx="6" fill="#3A3A40" stroke="${C.stroke}" stroke-width="1.3"/>
+  <line x1="155" y1="149" x2="325" y2="149" stroke="#5A5A60" stroke-width="1.2"/>
+  <line x1="155" y1="158" x2="325" y2="158" stroke="#5A5A60" stroke-width="1.2"/>
+  <line x1="155" y1="167" x2="325" y2="167" stroke="#5A5A60" stroke-width="1.2"/>
+  <line x1="155" y1="176" x2="325" y2="176" stroke="#5A5A60" stroke-width="1.2"/>
+  <!-- Faros -->
+  <rect x="122" y="143" width="16" height="36" rx="4" fill="${C.faro}" stroke="${C.stroke}" stroke-width="1"/>
+  <rect x="344" y="143" width="16" height="36" rx="4" fill="${C.faro}" stroke="${C.stroke}" stroke-width="1"/>
+  <!-- Placa -->
+  <rect x="210" y="182" width="62" height="14" rx="3" fill="${C.panel}" stroke="${C.stroke}" stroke-width="1"/>
+  <!-- Bumper -->
+  <rect x="118" y="187" width="246" height="12" rx="4" fill="${C.panel}" stroke="${C.stroke}" stroke-width="1.2"/>
+  <!-- Ruedas frente -->
+  <ellipse cx="154" cy="208" rx="30" ry="10" fill="${C.rueda}" stroke="${C.stroke}" stroke-width="1.5"/>
+  <ellipse cx="326" cy="208" rx="30" ry="10" fill="${C.rueda}" stroke="${C.stroke}" stroke-width="1.5"/>
+  <line x1="0" y1="218" x2="480" y2="218" stroke="${C.piso}" stroke-width="1.2" stroke-dasharray="7,5"/>
+`},
+
+/* ─── ATRÁS ─── */
+atras: { zones: [
+  { id:7, name:'Parte Trasera / Puertas', hitX:108,hitY:32, hitW:266,hitH:168, px:240, py:118,
+    label:'Puertas traseras', lx:240, ly:100 },
+  { id:9, name:'Llantas / Ejes',          hitX:108,hitY:192,hitW:266,hitH:22,  px:240, py:205,
+    label:'Llantas', lx:240, ly:205 },
+],
+svg: `
+  <!-- Caja trasera -->
+  <rect x="108" y="32" width="266" height="168" rx="8" fill="${C.cuerpo}" stroke="${C.stroke}" stroke-width="2.2"/>
+  <!-- División central puertas -->
+  <line x1="241" y1="32" x2="241" y2="200" stroke="${C.stroke}" stroke-width="2.2"/>
+  <!-- Textura paneles puerta -->
+  <rect x="115" y="40" width="120" height="152" rx="3" fill="${C.puerta}" stroke="${C.stroke}" stroke-width="0.8"/>
+  <rect x="247" y="40" width="120" height="152" rx="3" fill="${C.puerta}" stroke="${C.stroke}" stroke-width="0.8"/>
+  <!-- Bisagras -->
+  <rect x="109" y="60"  width="11" height="20" rx="3" fill="#888" stroke="#666" stroke-width="0.7"/>
+  <rect x="109" y="120" width="11" height="20" rx="3" fill="#888" stroke="#666" stroke-width="0.7"/>
+  <rect x="362" y="60"  width="11" height="20" rx="3" fill="#888" stroke="#666" stroke-width="0.7"/>
+  <rect x="362" y="120" width="11" height="20" rx="3" fill="#888" stroke="#666" stroke-width="0.7"/>
+  <!-- Manijas -->
+  <rect x="208" y="108" width="26" height="8" rx="4" fill="#555" stroke="#444" stroke-width="0.8"/>
+  <rect x="248" y="108" width="26" height="8" rx="4" fill="#555" stroke="#444" stroke-width="0.8"/>
+  <!-- Faros traseros -->
+  <rect x="110" y="168" width="44" height="24" rx="4" fill="${C.faroR}" stroke="${C.stroke}" stroke-width="1"/>
+  <rect x="329" y="168" width="44" height="24" rx="4" fill="${C.faroR}" stroke="${C.stroke}" stroke-width="1"/>
+  <!-- Luz central -->
+  <rect x="215" y="175" width="52" height="12" rx="3" fill="#888" stroke="${C.stroke}" stroke-width="0.8"/>
+  <!-- Placa trasera -->
+  <rect x="200" y="188" width="82" height="14" rx="3" fill="${C.panel}" stroke="${C.stroke}" stroke-width="1"/>
+  <!-- Bumper -->
+  <rect x="108" y="194" width="266" height="10" rx="3" fill="${C.panel}" stroke="${C.stroke}" stroke-width="1.2"/>
+  <!-- Ruedas -->
+  <ellipse cx="163" cy="210" rx="34" ry="10" fill="${C.rueda}" stroke="${C.stroke}" stroke-width="1.5"/>
+  <ellipse cx="319" cy="210" rx="34" ry="10" fill="${C.rueda}" stroke="${C.stroke}" stroke-width="1.5"/>
+  <line x1="0" y1="218" x2="480" y2="218" stroke="${C.piso}" stroke-width="1.2" stroke-dasharray="7,5"/>
+`},
+
+/* ─── TECHO (vista superior) ─── */
+techo: { zones: [
+  { id:8, name:'Techo', hitX:28,hitY:62, hitW:300,hitH:116, px:178, py:120,
+    label:'Techo caja', lx:178, ly:105 },
+  { id:3, name:'Lado Izq. Cabina (techo)', hitX:330,hitY:62, hitW:132,hitH:52, px:396, py:88,
+    label:'Techo cabina\n(Copiloto)', lx:396, ly:76 },
+  { id:4, name:'Lado Der. Cabina (techo)', hitX:330,hitY:116,hitW:132,hitH:62, px:396, py:148,
+    label:'Techo cabina\n(Chofer)', lx:396, ly:136 },
+],
+svg: `
+  <!-- Caja vista superior -->
+  <rect x="28" y="62" width="300" height="116" rx="6" fill="${C.cuerpo}" stroke="${C.stroke}" stroke-width="2.2"/>
+  <!-- Líneas de panel techo caja -->
+  <line x1="110" y1="62" x2="110" y2="178" stroke="${C.stroke}" stroke-width="1.2"/>
+  <line x1="192" y1="62" x2="192" y2="178" stroke="${C.stroke}" stroke-width="1.2"/>
+  <line x1="266" y1="62" x2="266" y2="178" stroke="${C.stroke}" stroke-width="1.2"/>
+  <!-- Cabina vista superior -->
+  <path d="M328,62 L460,72 L460,168 L328,178 Z" fill="${C.cuerpo}" stroke="${C.stroke}" stroke-width="2.2"/>
+  <!-- División cabina izq/der -->
+  <line x1="328" y1="120" x2="460" y2="120" stroke="${C.stroke}" stroke-width="1.5"/>
+  <!-- Escotilla / ventana techo cabina -->
+  <rect x="380" y="80" width="66" height="36" rx="4" fill="${C.vidrio}" stroke="${C.stroke}" stroke-width="1.2"/>
+  <rect x="380" y="124" width="66" height="36" rx="4" fill="${C.vidrio}" stroke="${C.stroke}" stroke-width="1.2" opacity="0.6"/>
+  <!-- Espejos -->
+  <rect x="316" y="52" width="20" height="18" rx="3" fill="${C.panel}" stroke="${C.stroke}" stroke-width="1.3"/>
+  <rect x="316" y="170" width="20" height="18" rx="3" fill="${C.panel}" stroke="${C.stroke}" stroke-width="1.3"/>
+  <!-- Indicador norte/frente -->
+  <polygon points="240,18 246,32 240,28 234,32" fill="#E24B4A" opacity="0.7"/>
+  <text x="240" y="14" text-anchor="middle" font-size="9" fill="#999" font-family="-apple-system,sans-serif">FRENTE</text>
+`}
+};
+
+/* ═══════════════════ ESTADO ════════════════════════ */
+let currentView = 'lado_Copiloto';
+let damages = {};  /* { zoneId: { name } } — sin severidad */
+
+/* ═══════════════════ RENDER ════════════════════════ */
+function setView(v) {
+  currentView = v;
+  document.querySelectorAll('.tab').forEach((t,i) => {
+    t.classList.toggle('active', ['lado_Copiloto','lado_Chofer','frente','atras','techo'][i] === v);
+  });
+  renderSVG();
+}
+
+function renderSVG() {
+  const vd = VIEWS[currentView];
+  const svg = document.getElementById('truck-svg');
+  let html = vd.svg;
+
+  vd.zones.forEach(z => {
+    const marked = !!damages[z.id];
+
+    if (marked) {
+      /* Pin marcado — toque lo quita */
+      html += `
+        <g onclick="onPinTap(event,${z.id})" style="cursor:pointer">
+          <circle cx="${z.px}" cy="${z.py}" r="22" fill="${C.pinGlow}"/>
+          <circle cx="${z.px}" cy="${z.py}" r="13" fill="${C.pin}" stroke="white" stroke-width="2"/>
+          <line x1="${z.px-5}" y1="${z.py}" x2="${z.px+5}" y2="${z.py}" stroke="white" stroke-width="2" stroke-linecap="round"/>
+          <line x1="${z.px}" y1="${z.py-5}" x2="${z.px}" y2="${z.py+5}" stroke="white" stroke-width="2" stroke-linecap="round"/>
+        </g>`;
+    } else {
+      /* Zona tocable — muestra área + etiqueta guía */
+      const linesRaw = z.label.split('\n');
+      const lineH = 13;
+      const boxH = linesRaw.length * lineH + 8;
+      const boxW = Math.max(...linesRaw.map(l => l.length)) * 6.2 + 16;
+
+      html += `
+        <g onclick="onZoneTap(event,${z.id})" style="cursor:pointer">
+          <rect x="${z.hitX}" y="${z.hitY}" width="${z.hitW}" height="${z.hitH}"
+            fill="${C.zona}" stroke="${C.zonaSt}" stroke-width="1.2"
+            stroke-dasharray="5,4" rx="6" opacity="0.6"/>
+          <rect x="${z.lx - boxW/2}" y="${z.ly - boxH/2}" width="${boxW}" height="${boxH}"
+            rx="5" fill="${C.labelBg}" stroke="${C.zonaSt}" stroke-width="0.8" opacity="0.95"/>
+          ${linesRaw.map((ln,i) =>
+            `<text x="${z.lx}" y="${z.ly - (linesRaw.length-1)*lineH/2 + i*lineH + 1}"
+              text-anchor="middle" dominant-baseline="middle"
+              font-size="10" font-weight="600" fill="${C.labelTxt}"
+              font-family="-apple-system,'Helvetica Neue',sans-serif">${ln}</text>`
+          ).join('')}
+        </g>`;
+    }
+  });
+
+  svg.innerHTML = html;
+}
+
+/* ═══════════════════ INTERACCIÓN ═══════════════════ */
+function onZoneTap(e, id) {
+  e.stopPropagation();
+  const zone = VIEWS[currentView].zones.find(z => z.id === id);
+  if (!zone) return;
+  damages[id] = { name: zone.name };
+  refresh();
+  notifyHost();
+  showToast('✓  ' + zone.name);
+}
+
+function onPinTap(e, id) {
+  e.stopPropagation();
+  delete damages[id];
+  refresh();
+  notifyHost();
+}
+
+function limpiarTodo() {
+  damages = {};
+  refresh();
+  notifyHost();
+}
+
+/* ═══════════════════ UI HELPERS ════════════════════ */
+function refresh() { renderSVG(); updateList(); updateBadges(); }
+
+function updateList() {
+  const wrap = document.getElementById('list-wrap');
+  const entries = Object.entries(damages);
+  const count = entries.length;
+  const badge = document.getElementById('top-badge');
+  badge.textContent = count;
+  badge.style.display = count > 0 ? 'inline-block' : 'none';
+
+  if (!count) {
+    wrap.innerHTML = '<span class="empty">Sin daños registrados</span>';
+    return;
+  }
+  wrap.innerHTML = entries.map(([id,d]) => `
+    <div class="damage-chip">
+      <span class="damage-chip-dot"></span>
+      <span>${d.name}</span>
+      <button class="rm-btn" onclick="removeDamage(${id})">×</button>
+    </div>`).join('');
+}
+
+function updateBadges() {
+  ['lado_Copiloto','lado_Chofer','frente','atras','techo'].forEach(v => {
+    const dot = document.getElementById('dot-' + v);
+    if (!dot) return;
+    dot.classList.toggle('on', VIEWS[v].zones.some(z => damages[z.id]));
+  });
+}
+
+function removeDamage(id) { delete damages[id]; refresh(); notifyHost(); }
+
+let toastTimer = null;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 1800);
+}
+
+/* ═══════════════════ BRIDGE MAUI ═══════════════════ */
+window.getDamagesJson = function() {
+  return JSON.stringify(Object.entries(damages).map(([id]) => ({
+    IdZonaDanio: parseInt(id),
+    Notas: null
+  })));
+};
+
+function notifyHost() {
+  try {
+    window.location.href = 'truckdamage://changed?data=' + encodeURIComponent(window.getDamagesJson());
+  } catch(e) {}
+}
+
+window.setDamagesJson = function(json) {
+  try {
+    const arr = JSON.parse(json);
+    damages = {};
+    arr.forEach(item => {
+      const zone = Object.values(VIEWS).flatMap(v => v.zones).find(z => z.id === item.IdZonaDanio);
+      if (zone) damages[item.IdZonaDanio] = { name: zone.name };
+    });
+    refresh();
+  } catch(e) {}
+};
+
+refresh();
+</script>
+</body>
+</html>

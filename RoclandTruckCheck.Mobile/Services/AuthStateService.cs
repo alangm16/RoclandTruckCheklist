@@ -75,6 +75,7 @@ public class AuthStateService
                 _sesion.Vehiculos = catalogos.Vehiculos;
                 _sesion.Sucursales = catalogos.Sucursales;
                 _sesion.Choferes = catalogos.Choferes;
+                _sesion.ZonasDanio = catalogos.ZonasDanio;
             }
 
             return true;
@@ -149,6 +150,7 @@ public class AuthStateService
             _sesion.Vehiculos = catalogos.Vehiculos;
             _sesion.Sucursales = catalogos.Sucursales;
             _sesion.Choferes = catalogos.Choferes;
+            _sesion.ZonasDanio = catalogos.ZonasDanio;
         }
 
         return true;

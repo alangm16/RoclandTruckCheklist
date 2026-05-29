@@ -331,6 +331,55 @@
                     </Grid>
                 </Frame>
 
+                <!-- ── PANEL CAMIÓN INTERACTIVO ─────────────────────────── -->
+                <Frame x:Name="PanelDaniosFrame"
+                   IsVisible="{Binding PanelDaniosVisible}"
+                   BackgroundColor="White"
+                   CornerRadius="16"
+                   Padding="0"
+                   BorderColor="#FFDAD6"
+                   HasShadow="False">
+
+                    <VerticalStackLayout Spacing="0">
+
+                        <!-- Cabecera del panel -->
+                        <Grid ColumnDefinitions="Auto,*"
+                          ColumnSpacing="8"
+                          Padding="16,12,16,10">
+                            <Border Grid.Column="0"
+                                BackgroundColor="#FFEDEB"
+                                StrokeShape="RoundRectangle 8"
+                                WidthRequest="32" HeightRequest="32">
+                                <Image Source="car_check.png"
+                                   WidthRequest="18" HeightRequest="18"
+                                   HorizontalOptions="Center"
+                                   VerticalOptions="Center"/>
+                            </Border>
+                            <VerticalStackLayout Grid.Column="1"
+                                             VerticalOptions="Center"
+                                             Spacing="1">
+                                <Label Text="Ubicar daños en el camión"
+                                   FontSize="14" FontAttributes="Bold"
+                                   TextColor="#B71C1C"/>
+                                <Label Text="Toca la zona afectada en el dibujo"
+                                   FontSize="11" TextColor="#E57373"/>
+                            </VerticalStackLayout>
+                        </Grid>
+
+                        <!-- Separador -->
+                        <BoxView HeightRequest="1"
+                             Color="#FFF0EE"
+                             Margin="0"/>
+
+                        <!-- WebView con el camión interactivo -->
+                        <WebView x:Name="TruckWebView"
+                             HeightRequest="390"
+                             HorizontalOptions="Fill"
+                             Navigating="OnTruckWebViewNavigating"/>
+
+                    </VerticalStackLayout>
+                </Frame>
+
                 <!-- Llantas en buen estado -->
                 <Frame x:Name="ItemLlantas"
                        BackgroundColor="White" CornerRadius="16"

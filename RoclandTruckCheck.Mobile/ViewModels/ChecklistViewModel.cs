@@ -6,18 +6,25 @@ using System.Collections.ObjectModel;
 
 namespace RoclandTruckCheck.Mobile.ViewModels;
 
+// ── Wrapper para manejar la selección en la UI ─────────────────
+public partial class ZonaItemViewModel : ObservableObject
+{
+    public ZonaDto Zona { get; set; } = null!;
+
+    [ObservableProperty]
+    private bool _isSelected;
+}
+
 public partial class ChecklistViewModel : ObservableObject
 {
     private readonly ApiService _api;
     private readonly SesionGuardia _sesion;
     private readonly TipoAccesoViewModel _tipoAccesoVm;
 
-    // ── Eventos hacia el code-behind ──────────────────────────────
     public event Action? OnTodoOk;
     public event Action? OnLimpiar;
     public event Action<string>? OnRegistroEnviado;
 
-    // ── Tipo de movimiento ────────────────────────────────────────
     private TipoRegistro _tipoRegistro;
 
     [ObservableProperty]
@@ -28,7 +35,6 @@ public partial class ChecklistViewModel : ObservableObject
 
     public TipoRegistro TipoRegistro { get; private set; }
 
-    // ── Catálogos ─────────────────────────────────────────────────
     [ObservableProperty]
     private ObservableCollection<SucursalDto> _sucursales = new();
 
@@ -37,8 +43,10 @@ public partial class ChecklistViewModel : ObservableObject
 
     [ObservableProperty]
     private ObservableCollection<ChoferDto> _choferes = new();
+
+    // ── Catálogo interactivo de zonas ─────────────────────────────
     [ObservableProperty]
-    private ObservableCollection<ZonaDto> _zonasDanio = new();
+    private ObservableCollection<ZonaItemViewModel> _zonasSeleccionables = new();
 
     [ObservableProperty]
     private SucursalDto? _sucursalSeleccionada;
@@ -52,11 +60,9 @@ public partial class ChecklistViewModel : ObservableObject
     [ObservableProperty]
     private ObservableCollection<CrearChecklistDanioRequest> _daniosSeleccionados = new();
 
-    // ── Observación ───────────────────────────────────────────────
     [ObservableProperty]
     private string? _observacion;
 
-    // ── Estado de los 6 ítems ─────────────────────────────────────
     private bool? _candados, _licencia, _danios, _llantas, _luces, _fugas;
 
     [ObservableProperty]
@@ -68,16 +74,16 @@ public partial class ChecklistViewModel : ObservableObject
     [ObservableProperty]
     private bool _puedeEnviar;
 
+    // ── Controla si se muestra el panel de daños ──────────────────
+    [ObservableProperty]
+    private bool _panelDaniosVisible;
+
     public ChecklistViewModel(ApiService api, SesionGuardia sesion, TipoAccesoViewModel tipoAccesoVm)
     {
         _api = api;
         _sesion = sesion;
         _tipoAccesoVm = tipoAccesoVm;
     }
-
-    // ─────────────────────────────────────────────────────────────────
-    // INICIALIZACIÓN: se llama desde la QueryProperty de la View
-    // ─────────────────────────────────────────────────────────────────
 
     public void InicializarConTipo(TipoRegistro tipo)
     {
@@ -91,6 +97,13 @@ public partial class ChecklistViewModel : ObservableObject
 
         CargarCatalogosDesdeCache();
 
+        // REQUERIMIENTO: Seleccionar CEDIS por defecto si es Entrada
+        if (tipo == TipoRegistro.Entrada)
+        {
+            SucursalSeleccionada = Sucursales.FirstOrDefault(s =>
+                s.Nombre.Contains("CEDIS BRAVO", StringComparison.OrdinalIgnoreCase));
+        }
+
         PuedeEnviar = false;
         ActualizarPuedeEnviar();
     }
@@ -100,20 +113,19 @@ public partial class ChecklistViewModel : ObservableObject
         Sucursales = new ObservableCollection<SucursalDto>(_sesion.Sucursales);
         Vehiculos = new ObservableCollection<VehiculoDto>(_sesion.Vehiculos);
         Choferes = new ObservableCollection<ChoferDto>(_sesion.Choferes);
-        ZonasDanio = new ObservableCollection<ZonaDto>(_sesion.ZonasDanio.Where(z => z.Activo));
-    }
 
-    // ─────────────────────────────────────────────────────────────────
-    // PARTIAL METHODS — reaccionar a cambios de picker
-    // ─────────────────────────────────────────────────────────────────
+        ZonasSeleccionables = new ObservableCollection<ZonaItemViewModel>(
+            _sesion.ZonasDanio.Where(z => z.Activo).Select(z => new ZonaItemViewModel
+            {
+                Zona = z,
+                IsSelected = false
+            })
+        );
+    }
 
     partial void OnSucursalSeleccionadaChanged(SucursalDto? value) => ActualizarPuedeEnviar();
     partial void OnVehiculoSeleccionadoChanged(VehiculoDto? value) => ActualizarPuedeEnviar();
     partial void OnChoferSeleccionadoChanged(ChoferDto? value) => ActualizarPuedeEnviar();
-
-    // ─────────────────────────────────────────────────────────────────
-    // SINCRONIZACIÓN DESDE CODE-BEHIND (estado de los 6 ítems)
-    // ─────────────────────────────────────────────────────────────────
 
     public void ActualizarItems(bool? candados, bool? licencia, bool? danios,
                                  bool? llantas, bool? luces, bool? fugas)
@@ -130,6 +142,53 @@ public partial class ChecklistViewModel : ObservableObject
         ProgresoChecklist = ItemsOk / 6.0;
 
         ActualizarPuedeEnviar();
+    }
+
+    /// <summary>
+    /// Recibe la lista de daños actualizada directamente desde el WebView.
+    /// Reemplaza DaniosSeleccionados completo para mantener la colección en sync.
+    /// El campo "Notas" del request transporta la severidad (leve/grave/critico)
+    /// como texto hasta que el backend soporte el campo Severidad.
+    /// </summary>
+    public void ActualizarDaniosDesdeWebView(List<CrearChecklistDanioRequest> danios)
+    {
+        DaniosSeleccionados.Clear();
+        foreach (var d in danios)
+            DaniosSeleccionados.Add(d);
+
+        ActualizarPuedeEnviar();
+    }
+
+    // ── Lógica para mostrar/ocultar el panel de zonas ─────────────
+    public void EvaluarEstadoDanios(bool? estadoDanios)
+    {
+        // Si hay daños (Falla = false), mostramos el panel interactivo
+        if (estadoDanios == false)
+        {
+            PanelDaniosVisible = true;
+        }
+        else
+        {
+            // Si está OK o Pendiente, ocultamos y limpiamos las selecciones
+            PanelDaniosVisible = false;
+            DaniosSeleccionados.Clear();
+            foreach (var zona in ZonasSeleccionables)
+            {
+                zona.IsSelected = false;
+            }
+        }
+    }
+
+    // ── Comando que ejecuta el guardia al tocar un Chip de Zona ───
+    [RelayCommand]
+    private void ToggleZonaDanio(ZonaItemViewModel item)
+    {
+        item.IsSelected = !item.IsSelected;
+
+        if (item.IsSelected)
+            AgregarDanio(item.Zona.Id);
+        else
+            RemoverDanio(item.Zona.Id);
     }
 
     private void ActualizarPuedeEnviar()
@@ -149,10 +208,6 @@ public partial class ChecklistViewModel : ObservableObject
             checklistCompleto;
     }
 
-    // ─────────────────────────────────────────────────────────────────
-    // COMANDOS
-    // ─────────────────────────────────────────────────────────────────
-
     [RelayCommand]
     private void TodoOk() => OnTodoOk?.Invoke();
 
@@ -160,8 +215,10 @@ public partial class ChecklistViewModel : ObservableObject
     private void Limpiar()
     {
         Observacion = null;
-        OnLimpiar?.Invoke();
         DaniosSeleccionados.Clear();
+        foreach (var zona in ZonasSeleccionables) zona.IsSelected = false;
+        PanelDaniosVisible = false;
+        OnLimpiar?.Invoke();
     }
 
     [RelayCommand]
@@ -195,9 +252,8 @@ public partial class ChecklistViewModel : ObservableObject
         }
     }
 
-    public void AgregarDanio(int idZona, string? notas = null)
+    private void AgregarDanio(int idZona, string? notas = null)
     {
-        // Evitar duplicados
         if (!DaniosSeleccionados.Any(d => d.IdZonaDanio == idZona))
         {
             DaniosSeleccionados.Add(new CrearChecklistDanioRequest
@@ -208,12 +264,9 @@ public partial class ChecklistViewModel : ObservableObject
         }
     }
 
-    public void RemoverDanio(int idZona)
+    private void RemoverDanio(int idZona)
     {
         var danio = DaniosSeleccionados.FirstOrDefault(d => d.IdZonaDanio == idZona);
-        if (danio != null)
-        {
-            DaniosSeleccionados.Remove(danio);
-        }
+        if (danio != null) DaniosSeleccionados.Remove(danio);
     }
 }

@@ -33,6 +33,9 @@ public partial class ChecklistViewModel : ObservableObject
     [ObservableProperty]
     private string _textoBotonEnviar = "Enviar entrada";
 
+    [ObservableProperty]
+    private bool _isBusy;
+
     public TipoRegistro TipoRegistro { get; private set; }
 
     [ObservableProperty]
@@ -224,31 +227,41 @@ public partial class ChecklistViewModel : ObservableObject
     [RelayCommand]
     private async Task Enviar()
     {
-        if (!PuedeEnviar) return;
+        if (!PuedeEnviar || IsBusy) return;
 
-        var request = new CrearChecklistRequest
+        IsBusy = true; // Activa el estado de carga
+        PuedeEnviar = false; // Opcional: apaga el botón
+        try 
         {
-            FechaHora = DateTime.Now,
-            TipoRegistro = _tipoRegistro.ToString(),
-            IdVehiculo = VehiculoSeleccionado!.Id,
-            IdSucursal = SucursalSeleccionada!.Id,
-            NombreChofer = ChoferSeleccionado!.Nombre,
-            Candados = _candados ?? false,
-            Licencia = _licencia ?? false,
-            SinDaniosNuevos = _danios ?? false,
-            LlantasBienEstado = _llantas ?? false,
-            LucesFuncionando = _luces ?? false,
-            SinFugasVisibles = _fugas ?? false,
-            Observacion = Observacion,
-            DaniosReportados = DaniosSeleccionados.ToList()
-        };
+            var request = new CrearChecklistRequest
+            {
+                FechaHora = DateTime.Now,
+                TipoRegistro = _tipoRegistro.ToString(),
+                IdVehiculo = VehiculoSeleccionado!.Id,
+                IdSucursal = SucursalSeleccionada!.Id,
+                NombreChofer = ChoferSeleccionado!.Nombre,
+                Candados = _candados ?? false,
+                Licencia = _licencia ?? false,
+                SinDaniosNuevos = _danios ?? false,
+                LlantasBienEstado = _llantas ?? false,
+                LucesFuncionando = _luces ?? false,
+                SinFugasVisibles = _fugas ?? false,
+                Observacion = Observacion,
+                DaniosReportados = DaniosSeleccionados.ToList()
+            };
 
-        var resultado = await _api.RegistrarChecklistAsync(request);
+            var resultado = await _api.RegistrarChecklistAsync(request);
 
-        if (resultado.HasValue)
+            if (resultado.HasValue)
+            {
+                _tipoAccesoVm.IncrementarRegistros();
+                OnRegistroEnviado?.Invoke(resultado.Value.Mensaje);
+            }
+        }
+        finally
         {
-            _tipoAccesoVm.IncrementarRegistros();
-            OnRegistroEnviado?.Invoke(resultado.Value.Mensaje);
+            IsBusy = false; // Apaga el estado de carga sin importar qué pase
+            ActualizarPuedeEnviar(); // Restaura el estado del botón si hubo error
         }
     }
 

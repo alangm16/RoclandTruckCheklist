@@ -35,10 +35,27 @@ public partial class ChecklistPage : ContentPage
             if (e.PropertyName == nameof(ChecklistViewModel.PuedeEnviar))
                 ActualizarColorBoton();
 
-            // Cuando el panel cambia a visible, cargamos el HTML
-            if (e.PropertyName == nameof(ChecklistViewModel.PanelDaniosVisible))
-                InicializarWebViewSiNecesario();
+            // ELIMINA O COMENTA ESTAS LÍNEAS:
+            // if (e.PropertyName == nameof(ChecklistViewModel.PanelDaniosVisible))
+            //     InicializarWebViewSiNecesario(); 
         };
+    }
+
+    protected override void OnAppearing()
+    {
+        base.OnAppearing();
+        _vm.OnTodoOk += HandleTodoOk;
+        _vm.OnLimpiar += HandleLimpiar;
+        TruckWebView.Navigated += OnTruckWebViewNavigated;
+
+        // NUEVO: PRECARGA SILENCIOSA
+        if (!_webViewReady && TruckWebView.Source == null)
+        {
+            TruckWebView.Source = new HtmlWebViewSource
+            {
+                Html = LoadEmbeddedHtml()
+            };
+        }
     }
 
     // ══════════════════════════════════════════════════════════════════
@@ -231,16 +248,6 @@ public partial class ChecklistPage : ContentPage
             BtnStop1.Color = Color.FromArgb(esEntrada ? "#1B8A3A" : "#B84A00");
             BtnStop2.Color = Color.FromArgb(esEntrada ? "#4CAF50" : "#F06000");
         }
-    }
-
-    protected override void OnAppearing()
-    {
-        base.OnAppearing();
-        _vm.OnTodoOk += HandleTodoOk;
-        _vm.OnLimpiar += HandleLimpiar;
-
-        // ★ Marcamos el WebView como listo una vez que la página aparece
-        TruckWebView.Navigated += OnTruckWebViewNavigated;
     }
 
     protected override void OnDisappearing()

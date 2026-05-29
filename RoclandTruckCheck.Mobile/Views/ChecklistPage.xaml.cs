@@ -125,7 +125,14 @@ public partial class ChecklistPage : ContentPage
     {
         try
         {
-            return JsonSerializer.Deserialize<List<CrearChecklistDanioRequest>>(json)
+            // Agrega estas opciones:
+            var options = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            };
+
+            // Pásale las opciones al deserializador:
+            return JsonSerializer.Deserialize<List<CrearChecklistDanioRequest>>(json, options)
                    ?? new List<CrearChecklistDanioRequest>();
         }
         catch { return new List<CrearChecklistDanioRequest>(); }

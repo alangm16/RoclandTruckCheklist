@@ -113,11 +113,11 @@
 </div>
 
 <div class="tabs">
-  <button class="tab active" onclick="setView('lado_Copiloto')">Copiloto<span class="tab-dot" id="dot-lado_Copiloto"></span></button>
-  <button class="tab" onclick="setView('lado_Chofer')">Chofer<span class="tab-dot" id="dot-lado_Chofer"></span></button>
-  <button class="tab" onclick="setView('frente')">Frente<span class="tab-dot" id="dot-frente"></span></button>
-  <button class="tab" onclick="setView('atras')">Atrás<span class="tab-dot" id="dot-atras"></span></button>
-  <button class="tab" onclick="setView('techo')">Techo<span class="tab-dot" id="dot-techo"></span></button>
+    <button class="tab active" onclick="setView('lado_Chofer')">Chofer<span class="tab-dot" id="dot-lado_Chofer"></span></button>
+    <button class="tab" onclick="setView('lado_Copiloto')">Copiloto<span class="tab-dot" id="dot-lado_Copiloto"></span></button>
+    <button class="tab" onclick="setView('frente')">Frente<span class="tab-dot" id="dot-frente"></span></button>
+    <button class="tab" onclick="setView('atras')">Atrás<span class="tab-dot" id="dot-atras"></span></button>
+    <button class="tab" onclick="setView('techo')">Techo<span class="tab-dot" id="dot-techo"></span></button>
 </div>
 
 <div class="canvas-wrap">
@@ -168,14 +168,33 @@ const VIEWS = {
    Copiloto = Lado IZQUIERDO de la caja / cabina (id 3, 5).
    El camión mira hacia la izquierda en esta vista.
 ───────────────────────────────────────────────────── */
-lado_Copiloto: { zones: [
-  { id:5, name:'Lado Izq. Caja',    hitX:22, hitY:45, hitW:288,hitH:122, px:160, py:106,
-    label:'Caja (lado Copiloto)', lx:160, ly:88 },
-  { id:3, name:'Lado Izq. Cabina',  hitX:312,hitY:52, hitW:138,hitH:116, px:381, py:120,
-    label:'Cabina (lado Copiloto)', lx:381, ly:100 },
-  { id:9, name:'Llantas / Ejes',    hitX:48, hitY:156,hitW:360,hitH:50,  px:240, py:184,
-    label:'Llantas', lx:240, ly:172 },
-],
+    lado_Copiloto: {
+        zones: [
+            {
+                id: 6,
+                name: 'Lado Der. Caja',
+                hitX: 22, hitY: 45, hitW: 288, hitH: 122,
+                px: 160, py: 106,
+                label: 'Caja (Copiloto)',
+                lx: 160, ly: 88
+            },
+            {
+                id: 4,
+                name: 'Lado Der. Cabina',
+                hitX: 312, hitY: 52, hitW: 138, hitH: 116,
+                px: 381, py: 120,
+                label: 'Cabina (Copiloto)',
+                lx: 381, ly: 100
+            },
+            {
+                id: 9,
+                name: 'Llantas / Ejes',
+                hitX: 48, hitY: 156, hitW: 360, hitH: 50,
+                px: 240, py: 184,
+                label: 'Llantas',
+                lx: 240, ly: 172
+            }
+        ],
 svg: `
   <!-- Caja principal -->
   <rect x="22" y="45" width="288" height="122" rx="6" fill="${C.cuerpo}" stroke="${C.stroke}" stroke-width="2.2"/>
@@ -223,14 +242,33 @@ svg: `
    Desde afuera: el Chofer está al lado DERECHO del vehículo.
    Esta es la vista opuesta: cabina a la IZQUIERDA del dibujo.
 ───────────────────────────────────────────────────── */
-lado_Chofer: { zones: [
-  { id:4, name:'Lado Der. Cabina',  hitX:22, hitY:52, hitW:138,hitH:116, px:91,  py:120,
-    label:'Cabina (Chofer)', lx:91, ly:100 },
-  { id:6, name:'Lado Der. Caja',    hitX:162,hitY:45, hitW:288,hitH:122, px:306, py:106,
-    label:'Caja (Chofer)', lx:306, ly:88 },
-  { id:9, name:'Llantas / Ejes',    hitX:48, hitY:156,hitW:360,hitH:50,  px:240, py:184,
-    label:'Llantas', lx:240, ly:172 },
-],
+    lado_Chofer: {
+        zones: [
+            {
+                id: 3,
+                name: 'Lado Izq. Cabina',
+                hitX: 22, hitY: 52, hitW: 138, hitH: 116,
+                px: 91, py: 120,
+                label: 'Cabina (Chofer)',
+                lx: 91, ly: 100
+            },
+            {
+                id: 5,
+                name: 'Lado Izq. Caja',
+                hitX: 162, hitY: 45, hitW: 288, hitH: 122,
+                px: 306, py: 106,
+                label: 'Caja (Chofer)',
+                lx: 306, ly: 88
+            },
+            {
+                id: 9,
+                name: 'Llantas / Ejes',
+                hitX: 48, hitY: 156, hitW: 360, hitH: 50,
+                px: 240, py: 184,
+                label: 'Llantas',
+                lx: 240, ly: 172
+            }
+        ],
 svg: `
   <!-- Cabina izquierda en esta vista (lado Chofer) -->
   <rect x="22" y="52" width="138" height="116" rx="9" fill="${C.cuerpo}" stroke="${C.stroke}" stroke-width="2.2"/>
@@ -369,7 +407,7 @@ svg: `
 };
 
 /* ═══════════════════ ESTADO ════════════════════════ */
-let currentView = 'lado_Copiloto';
+let currentView = 'lado_Chofer';
 let damages = {};  /* { zoneId: { name } } — sin severidad */
 
 /* ═══════════════════ RENDER ════════════════════════ */

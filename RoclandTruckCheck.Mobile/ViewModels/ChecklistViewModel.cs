@@ -228,7 +228,7 @@ public partial class ChecklistViewModel : ObservableObject
 
         var request = new CrearChecklistRequest
         {
-            FechaHora = DateTime.UtcNow,
+            FechaHora = DateTime.Now,
             TipoRegistro = _tipoRegistro.ToString(),
             IdVehiculo = VehiculoSeleccionado!.Id,
             IdSucursal = SucursalSeleccionada!.Id,

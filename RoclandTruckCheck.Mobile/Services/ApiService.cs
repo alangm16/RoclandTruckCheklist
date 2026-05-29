@@ -142,11 +142,17 @@ public class  ApiService
     {
         try
         {
+            // VERIFICACIÓN PROACTIVA DEL REFRESH TOKEN
+            var authService = _serviceProvider.GetService<AuthStateService>();
+            if (authService != null)
+            {
+                await authService.GarantizarTokenValidoAsync();
+            }
+
             SetAuthHeader();
             var response = await _http.GetAsync($"{ApiBasePath}/Guardias/catalogos");
 
             if (!response.IsSuccessStatusCode) return null;
-
             return await response.Content.ReadFromJsonAsync<CatalogosMobileResponse>(JsonOpts);
         }
         catch (Exception ex)
@@ -156,35 +162,82 @@ public class  ApiService
         }
     }
 
+    public async Task<LoginResponse?> RefrescarTokenAsync(string refreshToken)
+    {
+        try
+        {
+            var payload = new
+            {
+                RefreshToken = refreshToken
+            };
+
+            // NOTA: Ajusta la ruta "api/superadmin/Auth/refresh" si tu backend usa otro nombre
+            var response = await _http.PostAsJsonAsync("api/superadmin/Auth/refresh", payload);
+            if (!response.IsSuccessStatusCode) return null;
+
+            return await response.Content.ReadFromJsonAsync<LoginResponse>(JsonOpts);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"RefrescarTokenAsync error: {ex.Message}");
+            return null;
+        }
+    }
+
     public async Task<(int Id, string Mensaje)?> RegistrarChecklistAsync(CrearChecklistRequest request)
     {
         try
         {
-            SetAuthHeader();
-            var response = await _http.PostAsJsonAsync($"{ApiBasePath}/Guardias/checklist", request);
-            var rawJson = await response.Content.ReadAsStringAsync();
-
-            if (!response.IsSuccessStatusCode)
+            // VERIFICACIÓN PROACTIVA DEL REFRESH TOKEN
+            var authService = _serviceProvider.GetService<AuthStateService>();
+            if (authService != null)
             {
-                MainThread.BeginInvokeOnMainThread(async () =>
-                {
-                    await Shell.Current.DisplayAlertAsync("Error al registrar", $"Status: {response.StatusCode}\n{rawJson}", "OK");
-                });
-                return null;
+                await authService.GarantizarTokenValidoAsync();
             }
 
-            var resultado = JsonSerializer.Deserialize<CrearChecklistResponse>(rawJson, JsonOpts);
-            if (resultado == null) return null;
+            SetAuthHeader(); //
 
-            return (resultado.Id, resultado.Mensaje);
+            // --- NUEVO: SERIALIZAR Y LOGUEAR EL PAYLOAD ---
+            var jsonPayload = JsonSerializer.Serialize(request, new JsonSerializerOptions { WriteIndented = true });
+
+            // Imprimir en la ventana de Salida/Consola de Visual Studio
+            //System.Diagnostics.Debug.WriteLine("=== PAYLOAD ENVIADO AL BACKEND ===");
+            //System.Diagnostics.Debug.WriteLine(jsonPayload);
+            //Console.WriteLine(jsonPayload);
+
+            // (Opcional) Descomenta esto si estás probando en un teléfono físico sin estar conectado por cable y quieres verlo en pantalla:
+
+            //MainThread.BeginInvokeOnMainThread(async () =>
+            //{
+            //    await Shell.Current.DisplayAlertAsync("DEBUG PAYLOAD", jsonPayload, "OK");
+            //});
+
+            // ----------------------------------------------
+
+            var response = await _http.PostAsJsonAsync($"{ApiBasePath}/Guardias/checklist", request); //
+            var rawJson = await response.Content.ReadAsStringAsync(); //
+
+            if (!response.IsSuccessStatusCode) //
+            {
+                MainThread.BeginInvokeOnMainThread(async () => //
+                {
+                    await Shell.Current.DisplayAlertAsync("Error al registrar", $"Status: {response.StatusCode}\n{rawJson}", "OK"); //
+                });
+                return null; //
+            }
+
+            var resultado = JsonSerializer.Deserialize<CrearChecklistResponse>(rawJson, JsonOpts); //
+            if (resultado == null) return null; //
+
+            return (resultado.Id, resultado.Mensaje); //
         }
         catch (Exception ex)
         {
-            MainThread.BeginInvokeOnMainThread(async () =>
+            MainThread.BeginInvokeOnMainThread(async () => //
             {
-                await Shell.Current.DisplayAlertAsync("Error de conexión", ex.Message, "OK");
+                await Shell.Current.DisplayAlertAsync("Error de conexión", ex.Message, "OK"); //
             });
-            return null;
+            return null; //
         }
     }
 }
